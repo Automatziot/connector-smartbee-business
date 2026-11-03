@@ -1,4 +1,4 @@
-import { createSmartBeeDocument, getDocumentStatus, type SmartBeeEnv } from "./smartbee-client";
+import { createSmartBeeDocument, getDocumentStatus, searchDocuments, type SmartBeeEnv } from "./smartbee-client";
 import { buildReceiptInput } from "./mcp";
 
 export interface ReceiptEnv extends SmartBeeEnv {
@@ -31,22 +31,36 @@ async function msgIdFor(orderId: string): Promise<string> {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
 }
 
-/** The receipt saved for an order, or one still processing at SmartBee that has finished since. */
-async function findSaved(env: ReceiptEnv, orderId: string): Promise<Record<string, unknown> | null> {
+/**
+ * The receipt SmartBee already issued for an order, read fresh from SmartBee by its number.
+ * KV keeps only which receipt belongs to which order (SmartBee cannot search by our order id);
+ * SmartBee alone assigns receipt numbers.
+ */
+export async function savedReceipt(env: ReceiptEnv, orderId: string): Promise<Record<string, unknown> | null> {
   if (!env.RECEIPTS) return null;
+  let doc: Record<string, any> | null = null;
   const saved = await env.RECEIPTS.get(`receipt:${orderId}`);
-  if (saved) return JSON.parse(saved);
-  const msgId = await env.RECEIPTS.get(`pending:${orderId}`);
-  if (!msgId) return null;
-  const now = await getDocumentStatus(env, msgId).catch(() => null);
-  if (now?.status !== "created") return null;
-  const doc = {
-    receipt_number: now.document.index,
-    pdf_link: now.document.linkToOriginal,
-    copy_link: now.document.linkToCopy,
-    document_id: now.document.documentId,
-  };
-  await env.RECEIPTS.put(`receipt:${orderId}`, JSON.stringify(doc));
+  if (saved) doc = JSON.parse(saved);
+  else {
+    const msgId = await env.RECEIPTS.get(`pending:${orderId}`);
+    if (!msgId) return null;
+    const now = await getDocumentStatus(env, msgId).catch(() => null);
+    if (now?.status !== "created") return null;
+    doc = {
+      receipt_number: now.document.index,
+      pdf_link: now.document.linkToOriginal,
+      copy_link: now.document.linkToCopy,
+      document_id: now.document.documentId,
+    };
+    await env.RECEIPTS.put(`receipt:${orderId}`, JSON.stringify(doc));
+  }
+  try {
+    const [hit] = await searchDocuments(env, { documentNumber: doc!.receipt_number, docType: "Receipt", limit: 1 });
+    if (hit && hit.number === doc!.receipt_number) doc = { ...doc, pdf_link: hit.linkToOriginal, document_id: hit.id, verified: true };
+    else doc = { ...doc, verified: false };
+  } catch {
+    // SmartBee unreachable: answer with what was saved when the receipt was issued.
+  }
   return doc;
 }
 
@@ -98,7 +112,7 @@ export async function issueReceipt(env: ReceiptEnv, body: Record<string, any>): 
         return json({ status: "draft", draft_document_id: out.document.draftDocumentId, note: "Saved as a draft in SmartBee, nothing was issued or emailed" }, 201);
       case "duplicate": {
         // Same order asked again: answer with the receipt issued the first time.
-        const saved = await findSaved(env, orderId);
+        const saved = await savedReceipt(env, orderId);
         return json({ status: "duplicate", message: "A receipt for this order_id was already requested", ...(saved ?? {}) }, 200);
       }
       case "pending":

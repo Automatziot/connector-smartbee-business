@@ -1,33 +1,29 @@
-import { handleCardcomWebhook, handlePay, handlePayStatus, type CardcomEnv } from "./cardcom";
+import { cardcomEnabled, handleCardcomWebhook, handlePay, handlePayStatus, type CardcomEnv } from "./cardcom";
 import { handleMcp } from "./mcp";
 import { handleReceipt, requireKey } from "./receipt";
 import { createSmartBeeDocument, getDocumentStatus, type DocumentInput, type SmartBeeEnv } from "./smartbee-client";
 
 export interface Env extends SmartBeeEnv, CardcomEnv {
-  LICENSE_KEY?: string;
   MCP_TOKEN?: string;
   SMARTBEE_RECEIPT_KEY?: string;
 }
 
-async function isLicenseValid(env: Env): Promise<boolean> {
-  try {
-    const response = await fetch("https://api.automatziot.com/v1/verify-license", {
-      headers: env.LICENSE_KEY ? { Authorization: `Bearer ${env.LICENSE_KEY}` } : {},
-    });
-    return response.status !== 402;
-  } catch {
-    // Endpoint doesn't exist yet - allow through so testing isn't blocked.
-    return true;
-  }
-}
-
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    if (!(await isLicenseValid(env))) {
-      return new Response("Payment Required", { status: 402 });
-    }
-
     const url = new URL(request.url);
+
+    // Install check: what is switched on. Never shows a secret.
+    if (url.pathname === "/health") {
+      return Response.json({
+        ok: Boolean(env.SMARTBEE_CLIENT_ID && env.SMARTBEE_PASSWORD && env.PROVIDERUSERTOKEN && env.SMARTBEE_RECEIPT_KEY),
+        receipts: Boolean(env.SMARTBEE_CLIENT_ID && env.SMARTBEE_PASSWORD && env.PROVIDERUSERTOKEN),
+        store_key: Boolean(env.SMARTBEE_RECEIPT_KEY),
+        card_payments: cardcomEnabled(env),
+        smartbee_env: env.SMARTBEE_ENV === "prod" ? "prod" : "test",
+        draft_mode: env.SMARTBEE_FORCE_DRAFT === "1",
+        receipt_memory: Boolean(env.RECEIPTS),
+      });
+    }
 
     // MCP endpoint for Claude custom connector: /mcp/<MCP_TOKEN>
     const mcp = url.pathname.match(/^\/mcp\/([^/]+)$/);

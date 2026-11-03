@@ -411,6 +411,8 @@ function withWhatsApp(outcome: any, input: DocumentInput) {
 
 const OTHER_LABELS: Record<string, string> = { bit: "Bit", paybox: "PayBox", other: "Other" };
 
+const CARD_TYPES = ["Isracard", "Visa", "Diners", "AmericanExpress", "Mastercard"];
+
 export function buildReceiptInput(a: Record<string, any>): DocumentInput {
   const amount = Number(a.amount);
   if (!(amount > 0)) throw new Error("amount must be a positive number");
@@ -432,17 +434,22 @@ export function buildReceiptInput(a: Record<string, any>): DocumentInput {
     case "other":
       receiptDetails.otherItems = [{ description: OTHER_LABELS[method], date, sum: amount }];
       break;
-    case "credit_card":
+    case "credit_card": {
       need("card_last_digits");
+      const installments = Math.min(Math.max(Math.trunc(Number(a.installments) || 1), 1), 99);
+      const first = Number(a.first_installment);
       receiptDetails.creditCardItems = [{
-        creditCardType: "Other",
+        creditCardType: CARD_TYPES.includes(a.card_type) ? a.card_type : "Other",
         cardNumber: String(a.card_last_digits).slice(-4),
-        creditDealType: "Regular",
-        installmentsNumber: 1,
+        creditDealType: installments > 1 ? "Installments" : "Regular",
+        installmentsNumber: installments,
+        firstInstallment: installments > 1 && first > 0 ? first : undefined,
+        voucherNumber: a.voucher_number ? String(a.voucher_number).slice(0, 50) : undefined,
         date,
         sum: amount,
       }];
       break;
+    }
     case "bank_transfer":
       need("bank_name", "bank_branch", "bank_account", "reference");
       receiptDetails.wireTransferItems = [{
