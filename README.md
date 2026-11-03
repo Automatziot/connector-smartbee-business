@@ -42,6 +42,7 @@
 1. נכנסים ל-Cloudflare בעצמכם.
 2. **Workers & Pages ← Create ← Import a repository**, מחברים את GitHub ובוחרים את ה-fork.
 3. משאירים את ההגדרות כמו שהן ולוחצים **Deploy**. בסוף מתקבלת כתובת בסגנון `https://smartbee-store-connector.<שם>.workers.dev`.
+4. אם ההתקנה נעצרת על `RECEIPTS` (אין הרשאה ליצור מאגר): Storage & Databases ← KV ← Create, שם `RECEIPTS`; ואז ב-Worker ← Settings ← Bindings ← Add ← KV namespace, שם המשתנה `RECEIPTS`, בוחרים את המאגר, ושוב Deploy.
 
 ### 3. ההגדרות: אתם מקלידים, לבד
 Worker ← **Settings ← Variables and Secrets ← Add**. כל ערך מסוג **Secret** נשמר מוצפן, ואחרי השמירה אי אפשר לקרוא אותו שוב, גם לא מנהל בחשבון.
