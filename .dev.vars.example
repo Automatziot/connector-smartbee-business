@@ -1,0 +1,10 @@
+# Settings the "Deploy to Cloudflare" button asks for. Names only, never real values here.
+# The business owner types the values on Cloudflare's deploy screen; they are saved encrypted.
+SMARTBEE_CLIENT_ID=from-smartbee
+SMARTBEE_PASSWORD=from-smartbee
+PROVIDERUSERTOKEN=from-smartbee
+SMARTBEE_RECEIPT_KEY=a-long-random-password-you-make-up
+SMARTBEE_ENV=prod
+SMARTBEE_FORCE_DRAFT=1
+CARDCOM_TERMINAL=0
+CARDCOM_API_NAME=none

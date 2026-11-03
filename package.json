@@ -14,5 +14,33 @@
     "typescript": "^5.6.2",
     "vitest": "^3.2.7",
     "wrangler": "^4.0.0"
+  },
+  "cloudflare": {
+    "bindings": {
+      "SMARTBEE_CLIENT_ID": {
+        "description": "מ-SmartBee: ה-API client id שקיבלתם במייל מ-SmartBee."
+      },
+      "SMARTBEE_PASSWORD": {
+        "description": "מ-SmartBee: סיסמת ה-API שקיבלתם במייל מ-SmartBee."
+      },
+      "PROVIDERUSERTOKEN": {
+        "description": "מ-SmartBee: ה-provider user token שקיבלתם במייל מ-SmartBee."
+      },
+      "SMARTBEE_RECEIPT_KEY": {
+        "description": "מפתח החנות: סיסמה חדשה וארוכה שאתם ממציאים (32 תווים ומעלה, ממחולל הסיסמאות של הדפדפן). אותה סיסמה תודבק גם בחנות."
+      },
+      "SMARTBEE_ENV": {
+        "description": "להשאיר prod."
+      },
+      "SMARTBEE_FORCE_DRAFT": {
+        "description": "1 בבדיקה הראשונה (רק טיוטות, שום דבר לא נשלח). אחרי שהבדיקה עברה משנים ל-0."
+      },
+      "CARDCOM_TERMINAL": {
+        "description": "רק לתשלום דרך Cardcom: מספר המסוף (בפורטל Cardcom, המספר בסוגריים ליד שם הסניף). בלי Cardcom: להשאיר 0."
+      },
+      "CARDCOM_API_NAME": {
+        "description": "רק לתשלום דרך Cardcom: שם משתמש ממשקים (הגדרות ← 1. הגדרות חברה ומשתמשים ← 4. ניהול מפתחות API לממשק). בלי Cardcom: להשאיר none."
+      }
+    }
   }
 }
