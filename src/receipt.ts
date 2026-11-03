@@ -5,6 +5,8 @@ export interface ReceiptEnv extends SmartBeeEnv {
   SMARTBEE_RECEIPT_KEY?: string;
   /** Set to "1" to make every receipt a draft: nothing official is issued, nothing is emailed. */
   SMARTBEE_FORCE_DRAFT?: string;
+  /** Remembers each order's receipt, so a repeated request still gets its number (SmartBee cannot look it up by order). */
+  RECEIPTS?: KVNamespace;
 }
 
 const json = (body: unknown, status: number) => Response.json(body, { status });
@@ -27,6 +29,25 @@ export async function requireKey(request: Request, env: ReceiptEnv): Promise<Res
 async function msgIdFor(orderId: string): Promise<string> {
   const hex = Array.from(await digest(`receipt:${orderId}`)).map((x) => x.toString(16).padStart(2, "0")).join("");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+/** The receipt saved for an order, or one still processing at SmartBee that has finished since. */
+async function findSaved(env: ReceiptEnv, orderId: string): Promise<Record<string, unknown> | null> {
+  if (!env.RECEIPTS) return null;
+  const saved = await env.RECEIPTS.get(`receipt:${orderId}`);
+  if (saved) return JSON.parse(saved);
+  const msgId = await env.RECEIPTS.get(`pending:${orderId}`);
+  if (!msgId) return null;
+  const now = await getDocumentStatus(env, msgId).catch(() => null);
+  if (now?.status !== "created") return null;
+  const doc = {
+    receipt_number: now.document.index,
+    pdf_link: now.document.linkToOriginal,
+    copy_link: now.document.linkToCopy,
+    document_id: now.document.documentId,
+  };
+  await env.RECEIPTS.put(`receipt:${orderId}`, JSON.stringify(doc));
+  return doc;
 }
 
 /** POST /receipt: one simple request from a site (Base44, Lovable ...) after a confirmed payment. */
@@ -54,8 +75,7 @@ export async function issueReceipt(env: ReceiptEnv, body: Record<string, any>): 
 
   try {
     const input = buildReceiptInput(body);
-    const msgId = await msgIdFor(orderId);
-    input.providerMsgId = msgId;
+    input.providerMsgId = await msgIdFor(orderId);
     input.providerMsgReferenceId = `order-${orderId}`.slice(0, 60);
     const draft = env.SMARTBEE_FORCE_DRAFT === "1" || body.draft === true;
     if (draft) {
@@ -64,33 +84,25 @@ export async function issueReceipt(env: ReceiptEnv, body: Record<string, any>): 
     }
     const out = await createSmartBeeDocument(env, input);
     switch (out.status) {
-      case "created":
-        return json(
-          {
-            status: "created",
-            receipt_number: out.document.index,
-            pdf_link: out.document.linkToOriginal,
-            copy_link: out.document.linkToCopy,
-            document_id: out.document.documentId,
-          },
-          201,
-        );
+      case "created": {
+        const saved = {
+          receipt_number: out.document.index,
+          pdf_link: out.document.linkToOriginal,
+          copy_link: out.document.linkToCopy,
+          document_id: out.document.documentId,
+        };
+        await env.RECEIPTS?.put(`receipt:${orderId}`, JSON.stringify(saved));
+        return json({ status: "created", ...saved }, 201);
+      }
       case "draft":
         return json({ status: "draft", draft_document_id: out.document.draftDocumentId, note: "Saved as a draft in SmartBee, nothing was issued or emailed" }, 201);
       case "duplicate": {
-        // Look up the receipt issued the first time, so a retry still gets its number.
-        const first = await getDocumentStatus(env, msgId).catch(() => null);
-        const doc = first?.status === "created" ? first.document : null;
-        return json(
-          {
-            status: "duplicate",
-            message: "A receipt for this order_id was already requested",
-            ...(doc ? { receipt_number: doc.index, pdf_link: doc.linkToOriginal, copy_link: doc.linkToCopy } : {}),
-          },
-          200,
-        );
+        // Same order asked again: answer with the receipt issued the first time.
+        const saved = await findSaved(env, orderId);
+        return json({ status: "duplicate", message: "A receipt for this order_id was already requested", ...(saved ?? {}) }, 200);
       }
       case "pending":
+        await env.RECEIPTS?.put(`pending:${orderId}`, out.msgId);
         return json({ status: "pending", msg_id: out.msgId }, 202);
       case "error":
         return json({ status: "error", result_code: out.resultCodeId, validation_errors: out.validationErrors }, 422);

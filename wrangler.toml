@@ -8,3 +8,7 @@ keep_vars = true
 
 [observability]
 enabled = true
+
+# Remembers each order's receipt. Created automatically on the first deploy.
+[[kv_namespaces]]
+binding = "RECEIPTS"
