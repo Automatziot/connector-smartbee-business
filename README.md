@@ -194,7 +194,7 @@ The store must run server-side code (Lovable, Wix with Velo, a custom site). In 
 ### Prompt A: receipts (every store)
 ```text
 Connect automatic receipts. Plain code only, no AI step builds the request.
-WHEN: every time an order becomes paid, run a server-side function sendReceipt.
+WHEN: every time an order becomes paid, run a server-side function sendReceipt. If the store takes no online payment, the owner marks an order paid in the admin page (choosing the payment method), and that runs sendReceipt. A customer can never mark their own order paid.
 REQUEST: POST <WORKER_URL>/receipt
 Headers: Content-Type: application/json; x-api-key: secret BOOKKEEPING_API_KEY (server only, never in frontend code, never logged)
 Body (send only fields that have a value):
