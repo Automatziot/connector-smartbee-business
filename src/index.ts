@@ -21,7 +21,7 @@ export default {
         card_payments: cardcomEnabled(env),
         smartbee_env: env.SMARTBEE_ENV === "prod" ? "prod" : "test",
         draft_mode: env.SMARTBEE_FORCE_DRAFT === "1",
-        receipt_memory: Boolean(env.RECEIPTS),
+        receipt_memory: Boolean(env.DB),
       });
     }
 

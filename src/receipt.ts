@@ -1,12 +1,11 @@
+import { memory, type MemoryEnv } from "./memory";
 import { createSmartBeeDocument, getDocumentStatus, searchDocuments, type SmartBeeEnv } from "./smartbee-client";
 import { buildReceiptInput } from "./mcp";
 
-export interface ReceiptEnv extends SmartBeeEnv {
+export interface ReceiptEnv extends SmartBeeEnv, MemoryEnv {
   SMARTBEE_RECEIPT_KEY?: string;
   /** Set to "1" to make every receipt a draft: nothing official is issued, nothing is emailed. */
   SMARTBEE_FORCE_DRAFT?: string;
-  /** Remembers each order's receipt, so a repeated request still gets its number (SmartBee cannot look it up by order). */
-  RECEIPTS?: KVNamespace;
 }
 
 const json = (body: unknown, status: number) => Response.json(body, { status });
@@ -33,16 +32,17 @@ async function msgIdFor(orderId: string): Promise<string> {
 
 /**
  * The receipt SmartBee already issued for an order, read fresh from SmartBee by its number.
- * KV keeps only which receipt belongs to which order (SmartBee cannot search by our order id);
+ * The memory keeps only which receipt belongs to which order (SmartBee cannot search by our order id);
  * SmartBee alone assigns receipt numbers.
  */
 export async function savedReceipt(env: ReceiptEnv, orderId: string): Promise<Record<string, unknown> | null> {
-  if (!env.RECEIPTS) return null;
+  const mem = memory(env);
+  if (!mem) return null;
   let doc: Record<string, any> | null = null;
-  const saved = await env.RECEIPTS.get(`receipt:${orderId}`);
+  const saved = await mem.get(`receipt:${orderId}`);
   if (saved) doc = JSON.parse(saved);
   else {
-    const msgId = await env.RECEIPTS.get(`pending:${orderId}`);
+    const msgId = await mem.get(`pending:${orderId}`);
     if (!msgId) return null;
     const now = await getDocumentStatus(env, msgId).catch(() => null);
     if (now?.status !== "created") return null;
@@ -52,7 +52,7 @@ export async function savedReceipt(env: ReceiptEnv, orderId: string): Promise<Re
       copy_link: now.document.linkToCopy,
       document_id: now.document.documentId,
     };
-    await env.RECEIPTS.put(`receipt:${orderId}`, JSON.stringify(doc));
+    await mem.put(`receipt:${orderId}`, JSON.stringify(doc));
   }
   try {
     const [hit] = await searchDocuments(env, { documentNumber: doc!.receipt_number, docType: "Receipt", limit: 1 });
@@ -105,7 +105,7 @@ export async function issueReceipt(env: ReceiptEnv, body: Record<string, any>): 
           copy_link: out.document.linkToCopy,
           document_id: out.document.documentId,
         };
-        await env.RECEIPTS?.put(`receipt:${orderId}`, JSON.stringify(saved));
+        await memory(env)?.put(`receipt:${orderId}`, JSON.stringify(saved));
         return json({ status: "created", ...saved }, 201);
       }
       case "draft":
@@ -116,7 +116,7 @@ export async function issueReceipt(env: ReceiptEnv, body: Record<string, any>): 
         return json({ status: "duplicate", message: "A receipt for this order_id was already requested", ...(saved ?? {}) }, 200);
       }
       case "pending":
-        await env.RECEIPTS?.put(`pending:${orderId}`, out.msgId);
+        await memory(env)?.put(`pending:${orderId}`, out.msgId);
         return json({ status: "pending", msg_id: out.msgId }, 202);
       case "error":
         return json({ status: "error", result_code: out.resultCodeId, validation_errors: out.validationErrors }, 422);

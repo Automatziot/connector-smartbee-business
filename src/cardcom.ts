@@ -1,3 +1,4 @@
+import { memory } from "./memory";
 import { issueReceipt, requireKey, savedReceipt, type ReceiptEnv } from "./receipt";
 
 /**
@@ -141,7 +142,7 @@ export async function handlePay(request: Request, env: CardcomEnv): Promise<Resp
     },
   });
   if (out.ResponseCode !== 0) return json({ error: "Cardcom refused the payment page", code: out.ResponseCode, description: out.Description }, 502);
-  await env.RECEIPTS?.put(`order:${out.LowProfileId}`, JSON.stringify(order), { expirationTtl: ORDER_TTL });
+  await memory(env)?.put(`order:${out.LowProfileId}`, JSON.stringify(order), ORDER_TTL);
   return json({ pay_url: out.Url, low_profile_id: out.LowProfileId }, 201);
 }
 
@@ -156,7 +157,7 @@ async function settle(env: CardcomEnv, request: Request, lowProfileId: string): 
   }
   if (t.IsRefund) return json({ status: "refund", order_id: r.ReturnValue, note: "Refunds never issue a receipt automatically" }, 200);
 
-  const stored = await env.RECEIPTS?.get(`order:${lowProfileId}`);
+  const stored = await memory(env)?.get(`order:${lowProfileId}`);
   const order = stored ? (JSON.parse(stored) as OrderRecord) : null;
   const body = receiptFromCardcom(r, order);
   const amountMismatch = order !== null && !sameAmount(order.amount, body.amount);

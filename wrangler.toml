@@ -9,6 +9,7 @@ keep_vars = true
 [observability]
 enabled = true
 
-# Remembers each order's receipt. Created automatically on the first deploy.
-[[kv_namespaces]]
-binding = "RECEIPTS"
+# The Worker's memory: which receipt belongs to which order. Created automatically on the first deploy.
+[[d1_databases]]
+binding = "DB"
+database_name = "smartbee-memory"
