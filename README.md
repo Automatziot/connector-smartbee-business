@@ -34,6 +34,7 @@
 | חשבון Cloudflare (חינם) | cloudflare.com |
 | SmartBee: API client id, API password, provider user token | מ-SmartBee (מבקשים גישת API לחשבון הייצור) |
 | Cardcom, רק אם רוצים אשראי: מספר מסוף, שם משתמש ממשקים | פורטל Cardcom: הגדרות ← 1. הגדרות חברה ומשתמשים ← 4. ניהול מפתחות API לממשק |
+| Cardcom, רק אם רוצים אשראי: מודול "פרופיל נמוך" פעיל במסוף | מתקשרים ל-Cardcom ומבקשים: "להפעיל במסוף שלי את מודול הפרופיל הנמוך לדפי תשלום דרך API". באותה שיחה אפשר לבקש גם Bit / PayPal. |
 
 ## התקנה
 
@@ -46,11 +47,21 @@
 3. מופיע מסך עם 8 שדות והסבר ליד כל אחד. עוברים עליו יחד, ואז **עוצרים את שיתוף המסך**.
 4. ממלאים את השדות בעצמכם: הפרטים שקיבלתם מ-SmartBee, הפרטים מ-Cardcom (בלי Cardcom משאירים `0` ו-`none`), ומפתח חנות שאתם ממציאים. לוחצים **Deploy**.
 5. מחזירים את שיתוף המסך. Automatziot בודקים שהכול תקין דרך כתובת `/health`, שמראה רק "תקין / לא תקין" ולא את הערכים.
-6. רק לאשראי: שלב "בפורטל Cardcom" שבסעיף 3. אחר כך סעיף 4, חיבור החנות.
+6. רק לאשראי: "הגדרות ב-Cardcom" למטה. אחר כך סעיף 4, חיבור החנות, וסעיף 5, בדיקה.
 
 Automatziot לא מקבלים גישה לחשבון ה-Cloudflare או ה-GitHub שלכם, ולא רואים אף סיסמה.
 
 אם הכפתור לא זמין, ממשיכים בדרך הידנית למטה (סעיפים 1-3).
+
+### הגדרות ב-Cardcom (רק לאשראי)
+בפורטל Cardcom (secure.cardcom.solutions), אתם בעצמכם:
+1. **חובה:** הגדרות ← 4. סליקה בפרופיל נמוך ← 2. הגדרות כלליות ← לסמן **"תמיד בצע דיווח של עסקה"** ← שמירה. לא משנים שום דבר אחר בעמוד הזה.
+2. **לפי בחירה, אמצעי תשלום נוספים:** ראשי ← רשימת מסופים ← ☰ ליד המסוף:
+   - **Bit / ביט:** פעיל רק כש-Cardcom היא גם החברה הסולקת שלכם. אחרת מבקשים מ-Cardcom.
+   - **GooglePay:** מסמנים "פעיל" ← שמור.
+   - **ApplePay:** מסמנים "פעיל" ← שמור (מופיע ללקוחות ב-Safari במכשירי Apple).
+   - **PayPal:** צריך פרטי API מחשבון ה-PayPal העסקי שלכם.
+   כל מה שמופעל מופיע מיד בדף התשלום, והקבלה ב-SmartBee נרשמת לפי אמצעי התשלום. אין צורך לשנות שום דבר ב-Worker.
 
 ### 1. עותק משלכם של הקוד
 1. Automatziot מוסיפים את משתמש ה-GitHub שלכם כקורא בלבד ל-repo הזה.
@@ -78,23 +89,25 @@ Worker ← **Settings ← Variables and Secrets ← Add**. כל ערך מסוג 
 | `CARDCOM_TERMINAL` | Secret | רק לאשראי: מספר המסוף |
 | `CARDCOM_API_NAME` | Secret | רק לאשראי: שם משתמש ממשקים |
 
-בפורטל Cardcom, רק לאשראי: הגדרות ← 4. סליקה בפרופיל נמוך ← 2. הגדרות כלליות ← לסמן **"תמיד בצע דיווח של עסקה"** ← שמירה.
+רק לאשראי: "הגדרות ב-Cardcom" למעלה.
 
 אחרי השמירה לוחצים **Deploy** פעם אחת כדי שההגדרות ייכנסו לתוקף.
 
 ### 4. חיבור החנות
-- בהגדרות הסודות של החנות (למשל Lovable ← Secrets) יוצרים `BOOKKEEPING_API_KEY` עם אותה סיסמה של `SMARTBEE_RECEIPT_KEY`. אתם מדביקים, לא אנחנו.
-- מריצים בכלי ה-AI של החנות את ההנחיה שקיבלתם מ-Automatziot, עם כתובת ה-Worker שלכם.
+1. Automatziot מדביקים בכלי ה-AI של החנות (למשל הצ'אט של Lovable) את Prompt A מהחלק באנגלית למטה, ואם יש אשראי גם את Prompt B, עם כתובת ה-Worker שלכם.
+2. **עוצרים את שיתוף המסך.** כשהחנות מבקשת סוד (ב-Lovable מופיעה תיבת "Add secret" בצ'אט), יוצרים `BOOKKEEPING_API_KEY` ומדביקים בדיוק את מפתח החנות ששמתם ב-`SMARTBEE_RECEIPT_KEY`. ב-Wix: Developer Tools ← Secrets Manager. מחזירים את שיתוף המסך.
+3. עם אשראי: בחנות יש כפתור "לתשלום" אחד, והלקוח בוחר אמצעי תשלום בדף של Cardcom.
 
 ### 5. בדיקה ועלייה לאוויר
 0. פותחים בדפדפן `https://<כתובת ה-Worker>/health`. צריך לראות `"ok": true`, `"receipt_memory": true`, ו-`"card_payments": true` אם חיברתם אשראי. אין שם אף סוד.
 1. הזמנה אחת עם `SMARTBEE_FORCE_DRAFT=1`: בודקים שנוצרה טיוטה ב-SmartBee.
-2. משנים ל-`0`, ומבצעים הזמנה אמיתית אחת למייל של בעל העסק.
+2. משנים ל-`0`: Worker ← Settings ← Variables and Secrets ← `SMARTBEE_FORCE_DRAFT` ← Edit ← `0` ← Save ← Deploy. מבצעים הזמנה אמיתית אחת למייל של בעל העסק, ובודקים שהקבלה הגיעה.
 3. מוודאים שהחנות או חברת הסליקה לא מפיקות קבלה משלהן (כדי שלא יהיו שתי קבלות).
 4. בעל העסק מסיר את Automatziot מחשבון ה-Cloudflare (Manage Account ← Members) ומה-GitHub, אם הוזמנו.
 
 ## עדכונים
-כשיוצאת גרסה חדשה, בעמוד ה-fork שלכם ב-GitHub לוחצים **Sync fork ← Update branch**. Cloudflare מעדכן את ה-Worker לבד. ההגדרות והסודות לא משתנים.
+- **התקנה בדרך הידנית (fork):** כשיוצאת גרסה חדשה, בעמוד ה-fork שלכם ב-GitHub לוחצים **Sync fork ← Update branch**. Cloudflare מעדכן את ה-Worker לבד. ההגדרות והסודות לא משתנים.
+- **התקנה בכפתור:** העותק אצלכם עצמאי, בלי Sync fork. Automatziot ישלחו הוראות עדכון כשתצא גרסה חדשה (הדרך עוד נקבעת).
 
 ## כתובות (לחנות)
 
@@ -131,7 +144,7 @@ Storage: one small Cloudflare D1 database bound as `DB`. **Cloudflare creates th
 The owner needs, in the business's name:
 - a GitHub account (free) and a Cloudflare account (free)
 - SmartBee API access: client id, API password, provider user token (ask SmartBee)
-- card payments only: a Cardcom terminal number and API user name. Cardcom portal: הגדרות → 1. הגדרות חברה ומשתמשים → 4. ניהול מפתחות API לממשק. Use the 20-character "משתמש ממשקים", not the key's display name.
+- card payments only: Cardcom turns on the low profile module (פרופיל נמוך) for API payment pages on the terminal (the owner phones Cardcom), plus a Cardcom terminal number and API user name. Cardcom portal: הגדרות → 1. הגדרות חברה ומשתמשים → 4. ניהול מפתחות API לממשק. Use the 20-character "משתמש ממשקים", not the key's display name.
 
 ## Step 2: Copy the code
 Main path: the Deploy to Cloudflare button above (`https://deploy.workers.cloudflare.com/?url=https://github.com/Automatziot/connector-smartbee-store`). Cloudflare clones the repo into the owner's GitHub (an independent copy, not a fork), creates the D1 database, and shows one form for the 8 settings listed in `.dev.vars.example`, with the descriptions from `package.json` → `cloudflare.bindings`. The button works only while this repository is public: Automatziot makes it public for the few minutes of the install. Without card payments, leave `CARDCOM_TERMINAL=0` and `CARDCOM_API_NAME=none` (card payments stay off). After the button, skip to the Cardcom portal setting in Step 4 (cards only), then Step 6. Run it with the owner on AnyDesk: show the form together, pause screen sharing while the owner types the values, resume and check `/health`. Automatziot never gets access to the owner's Cloudflare or GitHub. Updates: the clone has no "Sync fork" button (how updates reach it is still to settle).
@@ -165,7 +178,7 @@ Worker → **Settings → Variables and Secrets → Add**. Secrets are encrypted
 | `CARDCOM_API_NAME` | Secret | card payments only: API user name |
 
 Card payments only, in the Cardcom portal: הגדרות → 4. סליקה בפרופיל נמוך → 2. הגדרות כלליות → tick **"תמיד בצע דיווח של עסקה"** → save. Leave "שלח דואר לכול עסקה" and the API override settings as they are.
-Optional, same page: Bit, Apple Pay, Google Pay and PayPal are turned on per terminal in the Cardcom portal (terminal list → ☰ → Bit). No code or setting changes here: the Worker reads how the customer paid (ExternalPaymentVector) and issues a Bit, PayPal ("other") or card receipt. Bit through Cardcom: up to 5,000 NIS per payment, one payment only.
+Optional, other payment methods, per terminal: ראשי → רשימת מסופים → ☰ next to the terminal. Bit / ביט works only when Cardcom is also the acquirer (otherwise ask Cardcom); GooglePay and ApplePay: tick "פעיל" → save (Apple Pay shows only in Safari on Apple devices); PayPal needs the business's PayPal API credentials. No code or setting changes here: the Worker reads how the customer paid (ExternalPaymentVector) and issues a Bit, PayPal ("other") or card receipt. Bit through Cardcom: up to 5,000 NIS per payment, one payment only.
 
 Then deploy once more (Deployments → Deploy, or any commit) so the settings take effect. `wrangler.toml` has `keep_vars = true`, so later updates never overwrite them.
 
