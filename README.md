@@ -177,15 +177,15 @@ The owner's orders page must be behind a login. Customers only see their own ord
 ### Prompt B: add card payments (after Prompt A)
 ```text
 Add real card payment through my endpoint. Plain code only. Keep everything else as it is.
-- credit_card: real payment on Cardcom's page. Remove any card_last_digits field: the card is typed only on the payment page. Never call sendReceipt for credit_card orders: my endpoint issues that receipt by itself after the charge.
-- every other method: unchanged (sendReceipt).
-1. START PAYMENT (server-side function startPayment, when the customer presses Pay with credit_card)
+- CHECKOUT: one "Pay" button, no payment method dropdown. It always goes to Cardcom's page, where the customer picks card, Bit, Apple Pay, Google Pay or PayPal (whatever the business turned on with Cardcom). Remove any card_last_digits field: the card is typed only on the payment page. New orders are saved with payment_method "credit_card" until paid. Never call sendReceipt from checkout: my endpoint issues the receipt by itself after Cardcom confirms the payment.
+- Payments the owner takes outside Cardcom (cash, bank transfer, Bit to his own phone): only from the admin page, where the owner marks the order paid and sendReceipt runs. Never from the customer's checkout.
+1. START PAYMENT (server-side function startPayment, when the customer presses Pay)
 POST <WORKER_URL>/pay, same headers as sendReceipt.
 Body: {"order_id":"<order id>","amount":<total>,"customer_name":"...","customer_email":"...","customer_phone":"...","description":"Order <id>: <items>","success_url":"<this app's public URL>/order/<order id>?paid=1","fail_url":"<this app's public URL>/order/<order id>?paid=0"}
 201 {"pay_url","low_profile_id"}: save low_profile_id on the order, status awaiting_payment, full-page redirect to pay_url.
 409 "already_paid": the order already has a receipt; show it. Other replies: status payment_failed, "Payment could not start" + "Try again".
 2. ORDER PAGE /order/<order id> (public, only this order). With paid=1: server-side function checkPayment GETs <WORKER_URL>/pay/<low_profile_id>.
-"paid": save receipt_number, pdf_link, card_last_digits, status receipt_sent; show "Payment received" + receipt number + PDF link.
+"paid": save receipt_number, pdf_link, payment_method ("credit_card", "bit" or "PayPal"), card_last_digits (card only), status receipt_sent; show "Payment received" + receipt number + PDF link + "שולם ב: אשראי / Bit / PayPal".
 "pending" (202), or "paid" without receipt_number: show "Payment received, preparing your receipt..." and check again every 3 seconds, up to 10 times; then a "Check again" button.
 "not_paid": status payment_failed, "Payment not completed" + "Pay again". "receipt_failed": status receipt_failed, admin sees Retry.
 With paid=0: status payment_failed, "Pay again".
