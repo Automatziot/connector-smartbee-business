@@ -37,15 +37,20 @@
 
 ## התקנה
 
-### הדרך הקצרה: כפתור אחד
+### הדרך הרגילה: כפתור אחד
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Automatziot/connector-smartbee-store)
 
+עושים את זה יחד ב-AnyDesk, ואת הסיסמאות אתם מקלידים לבד:
 1. Automatziot פותחים את הכפתור לכמה דקות ושולחים לכם את הקישור.
-2. לוחצים, נכנסים ל-Cloudflare ומחברים את GitHub. Cloudflare יוצרת עותק של הקוד בחשבון ה-GitHub שלכם, ויוצרת לבד את מסד הנתונים (D1).
-3. באותו מסך מופיעים 8 שדות עם הסבר ליד כל אחד. ממלאים אותם בעצמכם, בלי שיתוף מסך (הפרטים מ-SmartBee ומ-Cardcom; בלי Cardcom משאירים `0` ו-`none`).
-4. לוחצים **Deploy**, ממשיכים לשלב "בפורטל Cardcom" שבסעיף 3 (רק לאשראי), ואחר כך לסעיף 4, חיבור החנות.
+2. לוחצים, נכנסים לחשבון ה-Cloudflare שלכם ומחברים את GitHub. Cloudflare יוצרת עותק של הקוד בחשבון ה-GitHub שלכם, ויוצרת לבד את מסד הנתונים (D1).
+3. מופיע מסך עם 8 שדות והסבר ליד כל אחד. עוברים עליו יחד, ואז **עוצרים את שיתוף המסך**.
+4. ממלאים את השדות בעצמכם: הפרטים שקיבלתם מ-SmartBee, הפרטים מ-Cardcom (בלי Cardcom משאירים `0` ו-`none`), ומפתח חנות שאתם ממציאים. לוחצים **Deploy**.
+5. מחזירים את שיתוף המסך. Automatziot בודקים שהכול תקין דרך כתובת `/health`, שמראה רק "תקין / לא תקין" ולא את הערכים.
+6. רק לאשראי: שלב "בפורטל Cardcom" שבסעיף 3. אחר כך סעיף 4, חיבור החנות.
 
-אם הכפתור לא זמין, ממשיכים בדרך הרגילה למטה.
+Automatziot לא מקבלים גישה לחשבון ה-Cloudflare או ה-GitHub שלכם, ולא רואים אף סיסמה.
+
+אם הכפתור לא זמין, ממשיכים בדרך הידנית למטה (סעיפים 1-3).
 
 ### 1. עותק משלכם של הקוד
 1. Automatziot מוסיפים את משתמש ה-GitHub שלכם כקורא בלבד ל-repo הזה.
@@ -129,9 +134,9 @@ The owner needs, in the business's name:
 - card payments only: a Cardcom terminal number and API user name. Cardcom portal: הגדרות → 1. הגדרות חברה ומשתמשים → 4. ניהול מפתחות API לממשק. Use the 20-character "משתמש ממשקים", not the key's display name.
 
 ## Step 2: Copy the code
-Shortest path: the Deploy to Cloudflare button above (`https://deploy.workers.cloudflare.com/?url=https://github.com/Automatziot/connector-smartbee-store`). Cloudflare clones the repo into the owner's GitHub (an independent copy, not a fork), creates the D1 database, and shows one form for the 8 settings listed in `.dev.vars.example`, with the descriptions from `package.json` → `cloudflare.bindings`. The button works only while this repository is public: Automatziot makes it public for the few minutes of the install. Without card payments, leave `CARDCOM_TERMINAL=0` and `CARDCOM_API_NAME=none` (card payments stay off). After the button, skip to the Cardcom portal setting in Step 4 (cards only), then Step 6. Updates: the clone has no "Sync fork" button (to settle in the first install test).
+Main path: the Deploy to Cloudflare button above (`https://deploy.workers.cloudflare.com/?url=https://github.com/Automatziot/connector-smartbee-store`). Cloudflare clones the repo into the owner's GitHub (an independent copy, not a fork), creates the D1 database, and shows one form for the 8 settings listed in `.dev.vars.example`, with the descriptions from `package.json` → `cloudflare.bindings`. The button works only while this repository is public: Automatziot makes it public for the few minutes of the install. Without card payments, leave `CARDCOM_TERMINAL=0` and `CARDCOM_API_NAME=none` (card payments stay off). After the button, skip to the Cardcom portal setting in Step 4 (cards only), then Step 6. Run it with the owner on AnyDesk: show the form together, pause screen sharing while the owner types the values, resume and check `/health`. Automatziot never gets access to the owner's Cloudflare or GitHub. Updates: the clone has no "Sync fork" button (how updates reach it is still to settle).
 
-Otherwise, the manual path:
+Fallback, the manual path:
 The owner opens this repository on GitHub and presses **Fork** (Automatziot gives them read access first). The fork is private and theirs.
 
 ## Step 3: Deploy on Cloudflare
