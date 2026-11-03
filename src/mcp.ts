@@ -432,7 +432,8 @@ export function buildReceiptInput(a: Record<string, any>): DocumentInput {
     case "bit":
     case "paybox":
     case "other":
-      receiptDetails.otherItems = [{ description: OTHER_LABELS[method], date, sum: amount }];
+      // payment_label names an "other" method on the receipt (e.g. PayPal through Cardcom).
+      receiptDetails.otherItems = [{ description: (method === "other" && a.payment_label ? String(a.payment_label).slice(0, 50) : OTHER_LABELS[method]), date, sum: amount }];
       break;
     case "credit_card": {
       need("card_last_digits");

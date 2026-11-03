@@ -51,6 +51,28 @@ describe("receiptFromCardcom", () => {
   it("pads numeric last digits", () => {
     expect(receiptFromCardcom(deal({ Last4CardDigitsString: "", Last4CardDigits: 8 }), order).card_last_digits).toBe("0008");
   });
+
+  it("Bit on Cardcom's page issues a Bit receipt, not a card receipt", () => {
+    for (const v of [104, "104", 12, 14, "BitCardcom"]) {
+      const r = receiptFromCardcom({ ...deal(), ExternalPaymentVector: v }, order);
+      expect(r.payment_method).toBe("bit");
+      expect(r.card_last_digits).toBeUndefined();
+      expect(r.amount).toBe(120);
+      expect(buildReceiptInput(r).receiptDetails!.otherItems![0].description).toBe("Bit");
+    }
+  });
+
+  it("PayPal issues an 'other' receipt labelled PayPal", () => {
+    const r = receiptFromCardcom({ ...deal(), ExternalPaymentVector: 10 }, order);
+    expect(r.payment_method).toBe("other");
+    expect(buildReceiptInput(r).receiptDetails!.otherItems![0].description).toBe("PayPal");
+  });
+
+  it("Apple Pay, Google Pay, 3DS and plain cards stay card receipts", () => {
+    for (const v of [undefined, 0, "0", 11, 13, 15, "NoneOrUnknown"]) {
+      expect(receiptFromCardcom({ ...deal(), ExternalPaymentVector: v }, order).payment_method).toBe("credit_card");
+    }
+  });
 });
 
 describe("buildReceiptInput credit card", () => {

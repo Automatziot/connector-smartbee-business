@@ -11,6 +11,7 @@
 
 - **קבלות:** הזמנה ששולמה בחנות (Lovable, Wix עם Velo, אתר מותאם) שולחת בקשה אחת, ו-SmartBee מפיקה קבלה ושולחת אותה ללקוח במייל.
 - **תשלום באשראי (Cardcom):** החנות מבקשת דף תשלום, הלקוח משלם בדף של Cardcom (פרטי הכרטיס לא עוברים אצלנו או אצל החנות), ואחרי שהתשלום מאומת מול Cardcom, הקבלה יוצאת ב-SmartBee לבד עם 4 הספרות האחרונות.
+- **Bit, Apple Pay, Google Pay, PayPal (דרך Cardcom):** מפעילים אותם במסוף ב-Cardcom, והם מופיעים באותו דף תשלום. סוג הקבלה נקבע לבד: Bit יוצאת כקבלת Bit, PayPal כ-"אחר" עם השם PayPal, ו-Apple Pay / Google Pay כקבלת אשראי.
 
 ## שני מצבים, אותו קוד
 
@@ -146,6 +147,7 @@ Worker → **Settings → Variables and Secrets → Add**. Secrets are encrypted
 | `CARDCOM_API_NAME` | Secret | card payments only: API user name |
 
 Card payments only, in the Cardcom portal: הגדרות → 4. סליקה בפרופיל נמוך → 2. הגדרות כלליות → tick **"תמיד בצע דיווח של עסקה"** → save. Leave "שלח דואר לכול עסקה" and the API override settings as they are.
+Optional, same page: Bit, Apple Pay, Google Pay and PayPal are turned on per terminal in the Cardcom portal (terminal list → ☰ → Bit). No code or setting changes here: the Worker reads how the customer paid (ExternalPaymentVector) and issues a Bit, PayPal ("other") or card receipt. Bit through Cardcom: up to 5,000 NIS per payment, one payment only.
 
 Then deploy once more (Deployments → Deploy, or any commit) so the settings take effect. `wrangler.toml` has `keep_vars = true`, so later updates never overwrite them.
 
