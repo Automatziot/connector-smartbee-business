@@ -42,7 +42,7 @@
    - `SMARTBEE_ENV`: להשאיר `prod`.
    - `SMARTBEE_FORCE_DRAFT`: להשאיר `1` בבדיקה הראשונה.
 3. לוחצים **Deploy**. בסוף מתקבלת כתובת בסגנון `https://smartbee-business-connector.<שם>.workers.dev`.
-4. **בדיקה עצמית:** פותחים בדפדפן `<הכתובת>/health?check=1`. ה-Worker פונה ל-SmartBee בבקשת קריאה אחת ומודיע מה לא תקין, בעברית ובאנגלית. `"ok": true` ו-`smartbee_test.ok: true` אומרים ש-SmartBee קיבלה את שלושת הפרטים. הכתובת לא מציגה אף ערך. `mcp_token_length` הוא אורך ה-MCP_TOKEN שנשמר (לא הסיסמה עצמה): אם הוא שונה מאורך הסיסמה ששמרתם, יש טעות בהעתקה.
+4. **בדיקה עצמית:** פותחים בדפדפן `<הכתובת>/health?check=1`. ה-Worker פונה ל-SmartBee בבקשת קריאה אחת ומודיע מה לא תקין, בעברית ובאנגלית. `"ok": true` ו-`smartbee_test.ok: true` אומרים ש-SmartBee קיבלה את ההתחברות ואת הרשאת ה-API (את `PROVIDERUSERTOKEN` בודקת הטיוטה הראשונה). הכתובת לא מציגה אף ערך. `mcp_token_length` הוא אורך ה-MCP_TOKEN שנשמר (לא הסיסמה עצמה): אם הוא שונה מאורך הסיסמה ששמרתם, יש טעות בהעתקה.
 
 ## חיבור ל-Claude
 
@@ -70,7 +70,7 @@ https://smartbee-business-connector.<שם>.workers.dev/mcp/<MCP_TOKEN>
 | מה רואים | מה זה אומר | מה עושים |
 |---|---|---|
 | `smartbee_test` עם `login_refused` | SmartBee לא קיבלה את ה-client id או הסיסמה, או ש-`SMARTBEE_ENV` לא מתאים לחשבון | מתקנים את ההגדרה הרלוונטית (למטה) ופותחים שוב את `/health?check=1` |
-| `smartbee_test` עם `provider_token` | ההתחברות עברה אבל ה-provider user token שגוי | מתקנים את `PROVIDERUSERTOKEN` |
+| `smartbee_test` עם `api_role_missing` | ההתחברות עברה אבל ל-SmartBee אין הרשאת API למשתמש | זה לא תיקון הגדרה: מבקשים מ-SmartBee להפעיל את הרשאת ה-API (`User missing roles: API`) |
 | ב-Claude: "Not found" | הסיסמה בכתובת החיבור שונה מ-`MCP_TOKEN` שב-Cloudflare | פותחים את `<הכתובת>/mcp/<הסיסמה>` בדפדפן. אם מופיע "Token accepted" הסיסמה נכונה. אם "Not found": מחליפים (למטה) ומעדכנים את הכתובת ב-Claude |
 | שכחתם את `MCP_TOKEN` | Cloudflare לא מציגה סיסמה שנשמרה | מחליפים אותה (למטה) |
 
@@ -94,7 +94,7 @@ You are guiding a business owner through installing the **SmartBee business conn
 1. **Prerequisites:** GitHub account, Cloudflare account (free), SmartBee API credentials (client id, API password, provider user token, requested from SmartBee for the production account), and a paid Claude plan that supports custom connectors.
 2. **Deploy:** open the "Deploy to Cloudflare" button above while signed in to Cloudflare. Connect GitHub when asked. Cloudflare copies the code into the owner's GitHub and deploys it.
 3. **Settings form (6 fields):** `SMARTBEE_CLIENT_ID`, `SMARTBEE_PASSWORD`, `PROVIDERUSERTOKEN` from SmartBee; `MCP_TOKEN` a new random password of 32+ characters made up by the owner (use the browser's password generator, save it in a password manager BEFORE clicking Deploy, it cannot be shown again; avoid `/ ? # %` and spaces); `SMARTBEE_ENV` = `prod`; `SMARTBEE_FORCE_DRAFT` = `1` for the first test. The owner pastes (not retypes) the SmartBee values from SmartBee's email; do not look at them.
-4. **Self-test:** open `https://smartbee-business-connector.<account>.workers.dev/health?check=1`. The Worker makes one read-only call to SmartBee and reports which setting is wrong (`login_refused` = client id, password or SMARTBEE_ENV; `provider_token` = PROVIDERUSERTOKEN). Expect `"ok": true` and `smartbee_test.ok: true`. It never shows values; `mcp_token_length` is only the length of the saved MCP_TOKEN, to compare with the length of the one in the password manager.
+4. **Self-test:** open `https://smartbee-business-connector.<account>.workers.dev/health?check=1`. The Worker makes one read-only call to SmartBee and reports which setting is wrong (`login_refused` = client id, password or SMARTBEE_ENV, test keys only work with test and production keys only with prod; `api_role_missing` = SmartBee has not activated the API role for the user, ask SmartBee). The answer names the server it called. PROVIDERUSERTOKEN is checked by the first draft document. Expect `"ok": true` and `smartbee_test.ok: true`. It never shows values; `mcp_token_length` is only the length of the saved MCP_TOKEN, to compare with the length of the one in the password manager.
 5. **Connect Claude:** claude.ai → Settings → Connectors → Add custom connector → `https://smartbee-business-connector.<account>.workers.dev/mcp/<MCP_TOKEN>`. The URL contains the secret: do not share it. To rotate, change `MCP_TOKEN` in Cloudflare (Worker → Settings → Variables and Secrets) and reconnect.
 6. **Dry run:** with `SMARTBEE_FORCE_DRAFT=1` everything is saved as a SmartBee draft: nothing is emailed to the customer. Ask Claude to prepare a test quote, approve the preview, and confirm in SmartBee that a draft appeared.
 7. **Go live:** set `SMARTBEE_FORCE_DRAFT` to `0` in Cloudflare. Documents are then issued for real, after the owner approves each preview. Receipts are official and cannot be deleted.

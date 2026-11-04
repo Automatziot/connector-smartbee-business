@@ -366,13 +366,16 @@ export async function searchExpenses(env: SmartBeeEnv, input: { fromDate?: strin
 export interface SmartBeeCheck {
   ok: boolean;
   /** Which setting to look at. Never contains a value. */
-  problem?: "login_refused" | "provider_token" | "unreachable";
+  problem?: "login_refused" | "api_role_missing" | "unreachable";
+  /** Which SmartBee server was called (never a secret). */
+  server?: string;
   message: string;
   message_he: string;
 }
 
 /** Self-test: one real, read-only round trip to SmartBee with the saved settings. Never returns a value. */
 export async function checkSmartBee(env: SmartBeeEnv): Promise<SmartBeeCheck> {
+  const server = baseUrl(env).replace("https://", "").replace("/api/v1", "");
   cached = null; // always a fresh login, never a cached one from before a fix
   try {
     await authenticate(env);
@@ -382,26 +385,47 @@ export async function checkSmartBee(env: SmartBeeEnv): Promise<SmartBeeCheck> {
       return {
         ok: false,
         problem: "login_refused",
-        message: `SmartBee refused the login (HTTP ${m[1]}). Check SMARTBEE_CLIENT_ID and SMARTBEE_PASSWORD, and that SMARTBEE_ENV matches the account (prod or test).`,
-        message_he: `SmartBee סירבה להתחברות (קוד ${m[1]}). בודקים את SMARTBEE_CLIENT_ID ואת SMARTBEE_PASSWORD, ושההגדרה SMARTBEE_ENV מתאימה לחשבון (prod או test).`,
+        server,
+        message: `SmartBee refused the login on ${server} (HTTP ${m[1]}). Check SMARTBEE_CLIENT_ID and SMARTBEE_PASSWORD, and that SMARTBEE_ENV matches the keys: test keys only work with test, production keys only with prod.`,
+        message_he: `SmartBee סירבה להתחברות ב-${server} (קוד ${m[1]}). בודקים את SMARTBEE_CLIENT_ID ואת SMARTBEE_PASSWORD, ושההגדרה SMARTBEE_ENV מתאימה למפתחות: מפתחות test עובדים רק עם test, מפתחות production רק עם prod.`,
       };
     }
     return {
       ok: false,
       problem: "unreachable",
+      server,
       message: "Could not reach SmartBee. Try again in a minute.",
       message_he: "לא הצלחנו להגיע ל-SmartBee. מנסים שוב בעוד דקה.",
     };
   }
+  // Role probe: look up a document id that cannot exist. "Not found" means the API role is active;
+  // "User missing roles: API" means SmartBee has not activated it for this user (as on production, 2026-10-22).
   try {
-    await searchDocuments(env, { limit: 1 });
+    const res = await sbFetch(env, "/documents/000000000000000000000000");
+    const body = (await res.json().catch(() => null)) as { resultCodeId?: number; validationErrors?: Record<string, string> | null } | null;
+    const denied = body?.validationErrors?.NotAuthorized;
+    if (denied) {
+      return {
+        ok: false,
+        problem: "api_role_missing",
+        server,
+        message: `Login accepted on ${server}, but SmartBee says this user has no API role (${denied}). Ask SmartBee to activate the API role for the user; nothing in the settings can fix it.`,
+        message_he: `ההתחברות הצליחה ב-${server}, אבל SmartBee מדווחת שלמשתמש אין הרשאת API (${denied}). מבקשים מ-SmartBee להפעיל את הרשאת ה-API למשתמש; אין הגדרה שתתקן את זה.`,
+      };
+    }
   } catch {
     return {
       ok: false,
-      problem: "provider_token",
-      message: "SmartBee accepted the login but refused the search. Check PROVIDERUSERTOKEN.",
-      message_he: "SmartBee קיבלה את ההתחברות אבל סירבה לחיפוש. בודקים את PROVIDERUSERTOKEN.",
+      problem: "unreachable",
+      server,
+      message: "Could not reach SmartBee. Try again in a minute.",
+      message_he: "לא הצלחנו להגיע ל-SmartBee. מנסים שוב בעוד דקה.",
     };
   }
-  return { ok: true, message: "SmartBee accepted all three settings.", message_he: "SmartBee קיבלה את שלושת הפרטים." };
+  return {
+    ok: true,
+    server,
+    message: `SmartBee accepted the login and the API role on ${server}. PROVIDERUSERTOKEN is checked by the first draft document.`,
+    message_he: `SmartBee קיבלה את ההתחברות ואת הרשאת ה-API ב-${server}. את PROVIDERUSERTOKEN בודקת הטיוטה הראשונה.`,
+  };
 }
