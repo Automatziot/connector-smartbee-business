@@ -3,8 +3,6 @@
 SMARTBEE_CLIENT_ID=from-smartbee
 SMARTBEE_PASSWORD=from-smartbee
 PROVIDERUSERTOKEN=from-smartbee
-SMARTBEE_RECEIPT_KEY=a-long-random-password-you-make-up
+MCP_TOKEN=a-long-random-password-you-make-up
 SMARTBEE_ENV=prod
 SMARTBEE_FORCE_DRAFT=1
-CARDCOM_TERMINAL=0
-CARDCOM_API_NAME=none

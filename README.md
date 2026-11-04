@@ -1,30 +1,25 @@
-# SmartBee store connector
+# SmartBee business connector
 
 > רוצים התקנה בעזרת AI? מדביקים את כל הקובץ הזה ל-Claude או ChatGPT ואומרים "תעביר אותי בהתקנה צעד אחר צעד". המדריך באנגלית בסוף הקובץ.
 
-קבלות SmartBee אוטומטיות מהחנות שלכם, ואם תרצו גם תשלום באשראי דרך Cardcom.
+מחברים את חשבון ה-SmartBee שלכם ל-Claude, ומדברים או כותבים: "תוציא הצעת מחיר לדנה ב-300", "דנה שילמה בביט, תוציא קבלה", "מה שלחתי החודש?".
 הכול רץ על חשבון ה-Cloudflare שלכם. אתם מחזיקים את כל המפתחות, ואף אחד אחר (גם לא Automatziot) לא יכול לקרוא אותם.
 
 רישיון: [PolyForm Internal Use 1.0.0](LICENSE). מותר להפעיל לעסק שלכם, להמשיך להשתמש גם אחרי שמפסיקים לעבוד איתנו. אסור למכור או להפיץ הלאה.
 
-## מה זה עושה
+מחפשים קבלות אוטומטיות מחנות אינטרנט, או תשלום באשראי דרך Cardcom? זה מחבר אחר: [connector-smartbee-store](https://github.com/Automatziot/connector-smartbee-store).
 
-- **קבלות:** הזמנה ששולמה בחנות (Lovable, Wix עם Velo, אתר מותאם) שולחת בקשה אחת, ו-SmartBee מפיקה קבלה ושולחת אותה ללקוח במייל.
-- **תשלום באשראי (Cardcom):** החנות מבקשת דף תשלום, הלקוח משלם בדף של Cardcom (פרטי הכרטיס לא עוברים אצלנו או אצל החנות), ואחרי שהתשלום מאומת מול Cardcom, הקבלה יוצאת ב-SmartBee לבד עם 4 הספרות האחרונות.
-- **Bit, Apple Pay, Google Pay, PayPal (דרך Cardcom):** מפעילים אותם במסוף ב-Cardcom, והם מופיעים באותו דף תשלום. סוג הקבלה נקבע לבד: Bit יוצאת כקבלת Bit, PayPal כ-"אחר" עם השם PayPal, ו-Apple Pay / Google Pay כקבלת אשראי.
+## מה Claude יכול לעשות
 
-## שני מצבים, אותו קוד
-
-| מצב | מה ממלאים | מה עובד |
+| פעולה | דוגמה | אישור לפני ביצוע |
 |---|---|---|
-| קבלות בלבד | הגדרות SmartBee | `POST /receipt` לכל אמצעי תשלום. `/pay` עונה `card_payments_disabled` |
-| קבלות + אשראי | הגדרות SmartBee + שתי הגדרות Cardcom | הכול. אשראי דרך `/pay`, שאר אמצעי התשלום דרך `/receipt` |
+| הצעת מחיר ללקוח (חדש או קיים) | "שלח לו הצעת מחיר לשעת ייעוץ ב-300" | כן |
+| קבלה על תשלום (מזומן, ביט, פייבוקס, אשראי, העברה, צ'ק) | "נחמה שילמה 300 בביט, תוציא לה קבלה" | כן |
+| חיפוש מסמכים | "מה הצעת המחיר האחרונה?", "הצעה מספר 5" | לא |
+| סגירת הצעה כטופלה | "נחמה אישרה, תסגור את ההצעה" | כן |
+| סיכום חודשי, סיכום הוצאות | "כמה הצעות מחיר הוצאתי החודש?" | לא |
 
-מוסיפים או מורידים את האשראי בכל רגע רק דרך ההגדרות, בלי לגעת בקוד.
-
-מה הקבלה כוללת בתשלום באשראי: הסכום שחויב בפועל, 4 ספרות אחרונות, סוג הכרטיס, מספר תשלומים ומספר אישור. כל מספרי הקבלות נקבעים ב-SmartBee בלבד. ה-Worker רק זוכר איזו קבלה שייכת לאיזו הזמנה (מסד D1 קטן בשם `smartbee-memory` שנוצר לבד בהתקנה הראשונה), וכל שאלה חוזרת נקראת מחדש מ-SmartBee.
-
-הגנות: הזמנה לא תפיק שתי קבלות; להזמנה ששולמה לא ייפתח דף תשלום נוסף; התשלום מאומת ישירות מול Cardcom לפני הקבלה; זיכוי לא מפיק קבלה אוטומטית; סכום שחויב ושונה מסכום ההזמנה מסומן `amount_mismatch`.
+כל פעולה שיוצרת או משנה מסמך מוצגת קודם כתצוגה מקדימה, ויוצאת רק אחרי שאתם מאשרים במפורש. קבלות הן מסמכים רשמיים שאי אפשר למחוק, ולכן שווה לקרוא את התצוגה לפני האישור. את המסמך שולחת ללקוח SmartBee עצמה.
 
 ## מה צריך לפני ההתקנה (הכול בשם העסק)
 
@@ -33,212 +28,60 @@
 | חשבון GitHub (חינם) | github.com |
 | חשבון Cloudflare (חינם) | cloudflare.com |
 | SmartBee: API client id, API password, provider user token | מ-SmartBee (מבקשים גישת API לחשבון הייצור) |
-| Cardcom, רק אם רוצים אשראי: מספר מסוף, שם משתמש ממשקים | פורטל Cardcom: הגדרות ← 1. הגדרות חברה ומשתמשים ← 4. ניהול מפתחות API לממשק |
-| Cardcom, רק אם רוצים אשראי: מודול "פרופיל נמוך" פעיל במסוף | מתקשרים ל-Cardcom ומבקשים: "להפעיל במסוף שלי את מודול הפרופיל הנמוך לדפי תשלום דרך API". באותה שיחה אפשר לבקש גם Bit / PayPal. |
+| חשבון Claude בתשלום, שמאפשר חיבורים מותאמים (Custom connectors) | claude.ai |
 
 ## התקנה
 
-### הדרך הרגילה: כפתור אחד
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Automatziot/connector-smartbee-store)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Automatziot/connector-smartbee-business)
 
-עושים את זה יחד ב-AnyDesk, ואת הסיסמאות אתם מקלידים לבד:
-1. Automatziot פותחים את הכפתור לכמה דקות ושולחים לכם את הקישור.
-2. לוחצים, נכנסים לחשבון ה-Cloudflare שלכם ומחברים את GitHub. Cloudflare יוצרת עותק של הקוד בחשבון ה-GitHub שלכם, ויוצרת לבד את מסד הנתונים (D1).
-3. מופיע מסך עם 8 שדות והסבר ליד כל אחד. עוברים עליו יחד, ואז **עוצרים את שיתוף המסך**.
-4. ממלאים את השדות בעצמכם: הפרטים שקיבלתם מ-SmartBee, הפרטים מ-Cardcom (בלי Cardcom משאירים `0` ו-`none`), ומפתח חנות שאתם ממציאים. לוחצים **Deploy**.
-5. מחזירים את שיתוף המסך. Automatziot בודקים שהכול תקין דרך כתובת `/health`, שמראה רק "תקין / לא תקין" ולא את הערכים.
-6. רק לאשראי: "הגדרות ב-Cardcom" למטה. אחר כך סעיף 4, חיבור החנות, וסעיף 5, בדיקה.
+1. נכנסים לחשבון ה-Cloudflare שלכם ומחברים את GitHub. Cloudflare יוצרת עותק של הקוד בחשבון ה-GitHub שלכם.
+2. מופיע מסך עם 6 שדות והסבר ליד כל אחד. ממלאים:
+   - שלושת פרטי SmartBee שקיבלתם במייל.
+   - `MCP_TOKEN`: סיסמה ארוכה שאתם ממציאים (32 תווים ומעלה, ממחולל הסיסמאות של הדפדפן). שומרים אותה במנהל סיסמאות.
+   - `SMARTBEE_ENV`: להשאיר `prod`.
+   - `SMARTBEE_FORCE_DRAFT`: להשאיר `1` בבדיקה הראשונה.
+3. לוחצים **Deploy**. בסוף מתקבלת כתובת בסגנון `https://smartbee-business-connector.<שם>.workers.dev`.
+4. בודקים: `<הכתובת>/health` צריך להראות `"ok": true`. הכתובת מראה רק "תקין / לא תקין" ולא את הערכים.
 
-Automatziot לא מקבלים גישה לחשבון ה-Cloudflare או ה-GitHub שלכם, ולא רואים אף סיסמה.
+## חיבור ל-Claude
 
-אם הכפתור לא זמין, ממשיכים בדרך הידנית למטה (סעיפים 1-3).
+ב-claude.ai: Settings ← Connectors ← Add custom connector. בשדה הכתובת מדביקים:
 
-### הגדרות ב-Cardcom (רק לאשראי)
-בפורטל Cardcom (secure.cardcom.solutions), אתם בעצמכם:
-1. **חובה:** הגדרות ← 4. סליקה בפרופיל נמוך ← 2. הגדרות כלליות ← לסמן **"תמיד בצע דיווח של עסקה"** ← שמירה. לא משנים שום דבר אחר בעמוד הזה.
-2. **לפי בחירה, אמצעי תשלום נוספים:** ראשי ← רשימת מסופים ← ☰ ליד המסוף:
-   - **Bit / ביט:** פעיל רק כש-Cardcom היא גם החברה הסולקת שלכם. אחרת מבקשים מ-Cardcom.
-   - **GooglePay:** מסמנים "פעיל" ← שמור.
-   - **ApplePay:** מסמנים "פעיל" ← שמור (מופיע ללקוחות ב-Safari במכשירי Apple).
-   - **PayPal:** צריך פרטי API מחשבון ה-PayPal העסקי שלכם.
-   כל מה שמופעל מופיע מיד בדף התשלום, והקבלה ב-SmartBee נרשמת לפי אמצעי התשלום. אין צורך לשנות שום דבר ב-Worker.
+```
+https://smartbee-business-connector.<שם>.workers.dev/mcp/<MCP_TOKEN>
+```
 
-### 1. עותק משלכם של הקוד
-1. Automatziot מוסיפים את משתמש ה-GitHub שלכם כקורא בלבד ל-repo הזה.
-2. בעמוד ה-repo לוחצים **Fork**. נוצר עותק פרטי אצלכם.
+הכתובת כוללת את הסיסמה, לכן לא משתפים אותה עם אף אחד. אם היא דלפה: משנים את `MCP_TOKEN` ב-Cloudflare (Worker ← Settings ← Variables and Secrets) ומחברים מחדש עם הכתובת החדשה.
 
-### 2. הקמה ב-Cloudflare
-1. נכנסים ל-Cloudflare בעצמכם.
-2. **Workers & Pages ← Create ← Import a repository**, מחברים את GitHub ובוחרים את ה-fork.
-3. משאירים את ההגדרות כמו שהן ולוחצים **Deploy**. בסוף מתקבלת כתובת בסגנון `https://smartbee-store-connector.<שם>.workers.dev`.
-4. אם ההתקנה נעצרת על מסד הנתונים (אין הרשאה ליצור אותו): Storage & Databases ← D1 ← Create database, שם `smartbee-memory`; ואז ב-GitHub עורכים את `wrangler.toml` ומוסיפים מתחת ל-`database_name` את השורה `database_id = "<המזהה שמופיע ב-D1>"`. שומרים, ו-Cloudflare מתקין שוב לבד. הטבלה נוצרת לבד, אין צורך בשום סקריפט.
+## בדיקה ראשונה, בלי להוציא שום מסמך
 
-### 3. ההגדרות: אתם מקלידים, לבד
-Worker ← **Settings ← Variables and Secrets ← Add**. כל ערך מסוג **Secret** נשמר מוצפן, ואחרי השמירה אי אפשר לקרוא אותו שוב, גם לא מנהל בחשבון.
+כש-`SMARTBEE_FORCE_DRAFT` הוא `1`, כל הצעה או קבלה נשמרת ב-SmartBee כ**טיוטה** בלבד ושום דבר לא נשלח ללקוח במייל.
+1. מבקשים מ-Claude: "מה אתה יכול לעשות עם SmartBee?" ואז "תכין הצעת מחיר לבדיקה ללקוח בדיקה ב-100".
+2. מאשרים את התצוגה המקדימה, ובודקים ב-SmartBee שנוצרה טיוטה.
+3. מוכנים? ב-Cloudflare משנים `SMARTBEE_FORCE_DRAFT` ל-`0`. מרגע זה מסמכים יוצאים באמת.
 
-כדאי לעשות את השלב הזה כשאף אחד לא צופה במסך (אם יש שיתוף מסך, עוצרים אותו לשלב הזה).
+## הוראות לפעולה (Skill)
 
-| שם | סוג | ערך |
-|---|---|---|
-| `SMARTBEE_CLIENT_ID` | Secret | מ-SmartBee |
-| `SMARTBEE_PASSWORD` | Secret | מ-SmartBee |
-| `PROVIDERUSERTOKEN` | Secret | מ-SmartBee |
-| `SMARTBEE_RECEIPT_KEY` | Secret | סיסמה חדשה וארוכה שאתם ממציאים (32 תווים ומעלה, למשל ממחולל הסיסמאות של הדפדפן). אותה סיסמה תודבק גם בחנות. |
-| `SMARTBEE_ENV` | Text | `prod` |
-| `SMARTBEE_FORCE_DRAFT` | Text | `1` בבדיקה הראשונה (רק טיוטות, שום דבר לא נשלח), `0` אחרי שהבדיקה עברה |
-| `CARDCOM_TERMINAL` | Secret | רק לאשראי: מספר המסוף |
-| `CARDCOM_API_NAME` | Secret | רק לאשראי: שם משתמש ממשקים |
+קובץ ה-zip `client-smartbee-business` (נמסר יחד עם ההתקנה) מלמד את Claude מתי להכין טיוטה, מתי לבקש אישור ואיך לדווח. מעלים ב-claude.ai: Customize ← Skills ← Add ← Upload a skill.
 
-רק לאשראי: "הגדרות ב-Cardcom" למעלה.
+## עדכונים והגנות
 
-אחרי השמירה לוחצים **Deploy** פעם אחת כדי שההגדרות ייכנסו לתוקף.
-
-### 4. חיבור החנות
-1. Automatziot מדביקים בכלי ה-AI של החנות (למשל הצ'אט של Lovable) את Prompt A מהחלק באנגלית למטה, ואם יש אשראי גם את Prompt B, עם כתובת ה-Worker שלכם.
-2. **עוצרים את שיתוף המסך.** כשהחנות מבקשת סוד (ב-Lovable מופיעה תיבת "Add secret" בצ'אט), יוצרים `BOOKKEEPING_API_KEY` ומדביקים בדיוק את מפתח החנות ששמתם ב-`SMARTBEE_RECEIPT_KEY`. ב-Wix: Developer Tools ← Secrets Manager. מחזירים את שיתוף המסך.
-3. עם אשראי: בחנות יש כפתור "לתשלום" אחד, והלקוח בוחר אמצעי תשלום בדף של Cardcom.
-
-### 5. בדיקה ועלייה לאוויר
-0. פותחים בדפדפן `https://<כתובת ה-Worker>/health`. צריך לראות `"ok": true`, `"receipt_memory": true`, ו-`"card_payments": true` אם חיברתם אשראי. אין שם אף סוד.
-1. הזמנה אחת עם `SMARTBEE_FORCE_DRAFT=1`: בודקים שנוצרה טיוטה ב-SmartBee.
-2. משנים ל-`0`: Worker ← Settings ← Variables and Secrets ← `SMARTBEE_FORCE_DRAFT` ← Edit ← `0` ← Save ← Deploy. מבצעים הזמנה אמיתית אחת למייל של בעל העסק, ובודקים שהקבלה הגיעה.
-3. מוודאים שהחנות או חברת הסליקה לא מפיקות קבלה משלהן (כדי שלא יהיו שתי קבלות).
-4. בעל העסק מסיר את Automatziot מחשבון ה-Cloudflare (Manage Account ← Members) ומה-GitHub, אם הוזמנו.
-
-## עדכונים
-- **התקנה בדרך הידנית (fork):** כשיוצאת גרסה חדשה, בעמוד ה-fork שלכם ב-GitHub לוחצים **Sync fork ← Update branch**. Cloudflare מעדכן את ה-Worker לבד. ההגדרות והסודות לא משתנים.
-- **התקנה בכפתור:** העותק אצלכם עצמאי, בלי Sync fork. Automatziot ישלחו הוראות עדכון כשתצא גרסה חדשה (הדרך עוד נקבעת).
-
-## כתובות (לחנות)
-
-| כתובת | מה |
-|---|---|
-| `POST /receipt` | קבלה להזמנה ששולמה (כל אמצעי תשלום) |
-| `POST /pay` | יצירת דף תשלום באשראי ב-Cardcom |
-| `GET /pay/<low_profile_id>` | האם שולם, ומספר הקבלה |
-| `POST /cardcom/webhook` | Cardcom מדווחת על עסקה (לא לשימוש החנות) |
-| `GET /health` | מה מופעל (בלי סודות) |
-
-כל הכתובות של החנות דורשות כותרת `x-api-key` עם `SMARTBEE_RECEIPT_KEY`. אותה הזמנה (`order_id`) לא תפיק שתי קבלות.
-
+- ההגדרות שלכם נשמרות ב-Cloudflare ועדכוני קוד לא דורסים אותן (`keep_vars`).
+- Automatziot לא מקבלים גישה לחשבון ה-Cloudflare או ה-GitHub שלכם, ולא רואים אף סיסמה.
+- בלי `MCP_TOKEN` חיבור ה-Claude כבוי לגמרי.
+- אין כאן אחסון של מסמכים או פרטי לקוחות: ה-Worker רק מעביר בקשות ל-SmartBee.
 
 ---
 
-# Install guide for an AI assistant (English)
+## English guide (paste this whole file into an AI assistant)
 
-Paste this whole README into an AI assistant (Claude, ChatGPT ...) and say: "Walk me through installing this, one step at a time." The steps below are written for that.
+You are guiding a business owner through installing the **SmartBee business connector**: a Cloudflare Worker that lets Claude create quotes and receipts, search documents and summarize income and expenses in the owner's own SmartBee account. Go one step at a time, wait for confirmation, never ask the owner to paste secrets into the chat.
 
-## Rules for the assistant
-- The business owner does every step in **their own** GitHub and Cloudflare accounts. Never ask the owner to send you a password, API key or token; the owner types them into Cloudflare themselves.
-- Go one step at a time. After each step, ask what the owner sees before continuing.
-- Nothing is sent to real customers until step 7 switches draft mode off.
-
-## What this is
-A Cloudflare Worker that turns a paid store order into a SmartBee receipt, and optionally charges cards through Cardcom first. One codebase, two modes:
-- **Receipts only:** fill in the SmartBee settings. The store calls `POST /receipt`.
-- **Receipts + card payments:** also fill in the two Cardcom settings. The store calls `POST /pay` for cards and `POST /receipt` for every other payment method.
-
-Storage: one small Cloudflare D1 database bound as `DB`. **Cloudflare creates the database on the first deploy (it is declared in `wrangler.toml`), and the code creates its own table on first use.** No schema step, no migration, no script, and nobody else needs access to the owner's account.
-
-## Step 1: Accounts
-The owner needs, in the business's name:
-- a GitHub account (free) and a Cloudflare account (free)
-- SmartBee API access: client id, API password, provider user token (ask SmartBee)
-- card payments only: Cardcom turns on the low profile module (פרופיל נמוך) for API payment pages on the terminal (the owner phones Cardcom), plus a Cardcom terminal number and API user name. Cardcom portal: הגדרות → 1. הגדרות חברה ומשתמשים → 4. ניהול מפתחות API לממשק. Use the 20-character "משתמש ממשקים", not the key's display name.
-
-## Step 2: Copy the code
-Main path: the Deploy to Cloudflare button above (`https://deploy.workers.cloudflare.com/?url=https://github.com/Automatziot/connector-smartbee-store`). Cloudflare clones the repo into the owner's GitHub (an independent copy, not a fork), creates the D1 database, and shows one form for the 8 settings listed in `.dev.vars.example`, with the descriptions from `package.json` → `cloudflare.bindings`. The button works only while this repository is public: Automatziot makes it public for the few minutes of the install. Without card payments, leave `CARDCOM_TERMINAL=0` and `CARDCOM_API_NAME=none` (card payments stay off). After the button, skip to the Cardcom portal setting in Step 4 (cards only), then Step 6. Run it with the owner on AnyDesk: show the form together, pause screen sharing while the owner types the values, resume and check `/health`. Automatziot never gets access to the owner's Cloudflare or GitHub. Updates: the clone has no "Sync fork" button (how updates reach it is still to settle).
-
-Fallback, the manual path:
-The owner opens this repository on GitHub and presses **Fork** (Automatziot gives them read access first). The fork is private and theirs.
-
-## Step 3: Deploy on Cloudflare
-1. Cloudflare dashboard → **Workers & Pages → Create → Import a repository**. Connect GitHub, pick the fork.
-2. Keep the defaults (deploy command `npx wrangler deploy`) and press **Deploy**.
-3. Note the Worker address, for example `https://smartbee-store-connector.<account>.workers.dev`.
-
-**If the deploy stops on the D1 database** (no permission to create it):
-1. Dashboard → **Storage & Databases → D1 → Create database**, name `smartbee-memory`.
-2. In the fork on GitHub, edit `wrangler.toml`: under `database_name = "smartbee-memory"` add `database_id = "<the id shown in D1>"`. Commit. Cloudflare redeploys by itself.
-
-Command-line alternative, only if the owner already uses Node.js on their own computer: `npx wrangler login`, then `npx wrangler d1 create smartbee-memory`, put the printed `database_id` into `wrangler.toml`, and push.
-
-## Step 4: Settings (the owner types them)
-Worker → **Settings → Variables and Secrets → Add**. Secrets are encrypted and cannot be read back by anyone after saving. Pause any screen sharing for this step.
-
-| Name | Type | Value |
-|---|---|---|
-| `SMARTBEE_CLIENT_ID` | Secret | from SmartBee |
-| `SMARTBEE_PASSWORD` | Secret | from SmartBee |
-| `PROVIDERUSERTOKEN` | Secret | from SmartBee |
-| `SMARTBEE_RECEIPT_KEY` | Secret | a new random password, 32+ characters, made up by the owner (browser password generator). The same value goes into the store in step 6. |
-| `SMARTBEE_ENV` | Text | `prod` (`test` only for SmartBee's test server) |
-| `SMARTBEE_FORCE_DRAFT` | Text | `1` for the first test (drafts only, nothing emailed), `0` after it passes |
-| `CARDCOM_TERMINAL` | Secret | card payments only: terminal number |
-| `CARDCOM_API_NAME` | Secret | card payments only: API user name |
-
-Card payments only, in the Cardcom portal: הגדרות → 4. סליקה בפרופיל נמוך → 2. הגדרות כלליות → tick **"תמיד בצע דיווח של עסקה"** → save. Leave "שלח דואר לכול עסקה" and the API override settings as they are.
-Optional, other payment methods, per terminal: ראשי → רשימת מסופים → ☰ next to the terminal. Bit / ביט works only when Cardcom is also the acquirer (otherwise ask Cardcom); GooglePay and ApplePay: tick "פעיל" → save (Apple Pay shows only in Safari on Apple devices); PayPal needs the business's PayPal API credentials. No code or setting changes here: the Worker reads how the customer paid (ExternalPaymentVector) and issues a Bit, PayPal ("other") or card receipt. Bit through Cardcom: up to 5,000 NIS per payment, one payment only.
-
-Then deploy once more (Deployments → Deploy, or any commit) so the settings take effect. `wrangler.toml` has `keep_vars = true`, so later updates never overwrite them.
-
-## Step 5: Check
-Open `https://<worker>/health`. Expected: `"ok":true`, `"receipts":true`, `"store_key":true`, `"receipt_memory":true`, `"card_payments":true` (or false for receipts only), `"smartbee_env":"prod"`, `"draft_mode":true`.
-- `receipt_memory:false` → the D1 binding `DB` is missing (step 3 fallback).
-- `card_payments:false` although Cardcom is wanted → `CARDCOM_TERMINAL` or `CARDCOM_API_NAME` missing.
-No secret is ever shown.
-
-## Step 6: Connect the store
-The store must run server-side code (Lovable, Wix with Velo, a custom site). In the store's server secrets the owner creates `BOOKKEEPING_API_KEY` with the same value as `SMARTBEE_RECEIPT_KEY`. Then paste a prompt into the store's AI builder, replacing `<WORKER_URL>`.
-
-### Prompt A: receipts (every store)
-```text
-Connect automatic receipts. Plain code only, no AI step builds the request.
-WHEN: every time an order becomes paid, run a server-side function sendReceipt. If the store takes no online payment, the owner marks an order paid in the admin page (choosing the payment method), and that runs sendReceipt. A customer can never mark their own order paid.
-REQUEST: POST <WORKER_URL>/receipt
-Headers: Content-Type: application/json; x-api-key: secret BOOKKEEPING_API_KEY (server only, never in frontend code, never logged)
-Body (send only fields that have a value):
-{"order_id":"<unique order id>","customer_name":"...","customer_email":"...","customer_phone":"...","amount":450,"payment_method":"bit","description":"Order <id>: <items>","send_to_customer":true}
-payment_method is one of: credit_card, bit, paybox, cash, bank_transfer, check, other. credit_card also sends card_last_digits. bank_transfer and check also send bank_name, bank_branch, bank_account, reference.
-SAVE ON THE ORDER: receipt_status, receipt_number, receipt_pdf_link, receipt_error.
-RESPONSE: 201 "created": save receipt_number and pdf_link, status receipt_sent. 201 "draft": status receipt_sent, receipt_number "draft". 200 "duplicate": status receipt_sent, save receipt_number and pdf_link if present, do not resend. 202 "pending": show "Check again" (resending the same order_id is safe). 401/400/422: save the error text, status receipt_failed, show "Retry receipt".
-The owner's orders page must be behind a login. Customers only see their own order: receipt number and PDF link.
-```
-
-### Prompt B: add card payments (after Prompt A)
-```text
-Add real card payment through my endpoint. Plain code only. Keep everything else as it is.
-- CHECKOUT: one "Pay" button, no payment method dropdown. It always goes to Cardcom's page, where the customer picks card, Bit, Apple Pay, Google Pay or PayPal (whatever the business turned on with Cardcom). Remove any card_last_digits field: the card is typed only on the payment page. New orders are saved with payment_method "credit_card" until paid. Never call sendReceipt from checkout: my endpoint issues the receipt by itself after Cardcom confirms the payment.
-- Payments the owner takes outside Cardcom (cash, bank transfer, Bit to his own phone): only from the admin page, where the owner marks the order paid and sendReceipt runs. Never from the customer's checkout.
-1. START PAYMENT (server-side function startPayment, when the customer presses Pay)
-POST <WORKER_URL>/pay, same headers as sendReceipt.
-Body: {"order_id":"<order id>","amount":<total>,"customer_name":"...","customer_email":"...","customer_phone":"...","description":"Order <id>: <items>","success_url":"<this app's public URL>/order/<order id>?paid=1","fail_url":"<this app's public URL>/order/<order id>?paid=0"}
-201 {"pay_url","low_profile_id"}: save low_profile_id on the order, status awaiting_payment, full-page redirect to pay_url.
-409 "already_paid": the order already has a receipt; show it. Other replies: status payment_failed, "Payment could not start" + "Try again".
-2. ORDER PAGE /order/<order id> (public, only this order). With paid=1: server-side function checkPayment GETs <WORKER_URL>/pay/<low_profile_id>.
-"paid": save receipt_number, pdf_link, payment_method ("credit_card", "bit" or "PayPal"), card_last_digits (card only), status receipt_sent; show "Payment received" + receipt number + PDF link + "שולם ב: אשראי / Bit / PayPal".
-"pending" (202), or "paid" without receipt_number: show "Payment received, preparing your receipt..." and check again every 3 seconds, up to 10 times; then a "Check again" button.
-"not_paid": status payment_failed, "Payment not completed" + "Pay again". "receipt_failed": status receipt_failed, admin sees Retry.
-With paid=0: status payment_failed, "Pay again".
-3. ADMIN ORDERS LIST: show low_profile_id and statuses awaiting_payment / paid / payment_failed. For credit_card orders "Retry receipt" calls checkPayment, not sendReceipt.
-```
-
-## Step 7: Test, then go live
-1. With `SMARTBEE_FORCE_DRAFT=1`: one order per payment method the store offers. Drafts appear in SmartBee. On a live Cardcom terminal use a real card and a small amount.
-2. Set `SMARTBEE_FORCE_DRAFT=0`, deploy once, place one real order to the owner's own email. The receipt arrives from SmartBee.
-3. Make sure the store or the payment company does not also issue receipts.
-4. The owner removes Automatziot from Cloudflare (Manage Account → Members) and GitHub, if they were invited.
-
-## Updates
-On the fork's GitHub page: **Sync fork → Update branch**. Cloudflare redeploys by itself. Settings, secrets and the D1 data stay as they are.
-
-## API reference
-| Route | Auth | Purpose |
-|---|---|---|
-| `POST /receipt` | `x-api-key` | Receipt for a paid order, any payment method. The same `order_id` never issues twice. |
-| `POST /pay` | `x-api-key` | Cardcom payment page. 501 `card_payments_disabled` without Cardcom settings; 409 `already_paid`. |
-| `GET /pay/<low_profile_id>` | `x-api-key` | Verifies the charge with Cardcom; returns `paid` + receipt, `pending`, `not_paid`, `refund` or `receipt_failed`. |
-| `POST /cardcom/webhook` | none (verified with Cardcom) | Cardcom reports a deal. Non-200 makes Cardcom retry. |
-| `GET /health` | none | What is switched on. No secrets. |
-
-Card receipts carry the charged amount, last 4 digits, card brand, installments and approval number. Receipt numbers come only from SmartBee; the Worker remembers which receipt belongs to which order (D1) and re-reads it from SmartBee on every repeat. A charged amount different from the order amount is flagged `amount_mismatch`. Refunds never issue a receipt automatically.
+1. **Prerequisites:** GitHub account, Cloudflare account (free), SmartBee API credentials (client id, API password, provider user token, requested from SmartBee for the production account), and a paid Claude plan that supports custom connectors.
+2. **Deploy:** open the "Deploy to Cloudflare" button above while signed in to Cloudflare. Connect GitHub when asked. Cloudflare copies the code into the owner's GitHub and deploys it.
+3. **Settings form (6 fields):** `SMARTBEE_CLIENT_ID`, `SMARTBEE_PASSWORD`, `PROVIDERUSERTOKEN` from SmartBee; `MCP_TOKEN` a new random password of 32+ characters made up by the owner (use the browser's password generator, save it in a password manager); `SMARTBEE_ENV` = `prod`; `SMARTBEE_FORCE_DRAFT` = `1` for the first test. The owner types the secrets; do not look at them.
+4. **Check:** open `https://smartbee-business-connector.<account>.workers.dev/health`. Expect `"ok": true`. It never shows values.
+5. **Connect Claude:** claude.ai → Settings → Connectors → Add custom connector → `https://smartbee-business-connector.<account>.workers.dev/mcp/<MCP_TOKEN>`. The URL contains the secret: do not share it. To rotate, change `MCP_TOKEN` in Cloudflare (Worker → Settings → Variables and Secrets) and reconnect.
+6. **Dry run:** with `SMARTBEE_FORCE_DRAFT=1` everything is saved as a SmartBee draft: nothing is emailed to the customer. Ask Claude to prepare a test quote, approve the preview, and confirm in SmartBee that a draft appeared.
+7. **Go live:** set `SMARTBEE_FORCE_DRAFT` to `0` in Cloudflare. Documents are then issued for real, after the owner approves each preview. Receipts are official and cannot be deleted.
+8. **Skill:** upload `client-smartbee-business.zip` in claude.ai (Customize → Skills → Add → Upload a skill).

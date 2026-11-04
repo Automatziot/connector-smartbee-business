@@ -13,7 +13,7 @@ import {
 import type { Customer, DocumentType, PaymentItem, ReceiptDetailsRequest } from "./types/smartbee";
 import type { DocumentInput } from "./smartbee-client";
 
-type McpEnv = SmartBeeEnv & { MCP_TOKEN?: string };
+type McpEnv = SmartBeeEnv & { MCP_TOKEN?: string; SMARTBEE_FORCE_DRAFT?: string };
 
 const SERVER_INFO = { name: "automatziot-smartbee", version: "0.7.0" };
 const DEFAULT_PROTOCOL = "2025-06-18";
@@ -381,7 +381,13 @@ async function confirmFlow(env: McpEnv, tool: string, args: Record<string, unkno
     throw new Error("Details differ from the approved preview. Request a new preview and ask the user to approve it.");
   }
   // Deterministic idempotency key: retrying the same confirmed request cannot create a duplicate document.
-  const outcome = await createSmartBeeDocument(env, { ...input, providerMsgId: `am-${full.slice(0, 32)}` });
+  // Draft mode (SMARTBEE_FORCE_DRAFT=1): everything is saved as a SmartBee draft, nothing is issued or emailed.
+  const doc: DocumentInput = { ...input, providerMsgId: `am-${full.slice(0, 32)}` };
+  if (env.SMARTBEE_FORCE_DRAFT === "1") {
+    doc.isDraft = true;
+    doc.creationMetadata = { ...(doc.creationMetadata ?? {}), sendOriginalToCustomer: false };
+  }
+  const outcome = await createSmartBeeDocument(env, doc);
   return withWhatsApp(outcome, input);
 }
 
@@ -432,7 +438,7 @@ export function buildReceiptInput(a: Record<string, any>): DocumentInput {
     case "bit":
     case "paybox":
     case "other":
-      // payment_label names an "other" method on the receipt (e.g. PayPal through Cardcom).
+      // payment_label names an "other" method on the receipt (e.g. PayPal).
       receiptDetails.otherItems = [{ description: (method === "other" && a.payment_label ? String(a.payment_label).slice(0, 50) : OTHER_LABELS[method]), date, sum: amount }];
       break;
     case "credit_card": {

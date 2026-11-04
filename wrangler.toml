@@ -1,15 +1,10 @@
-name = "smartbee-store-connector"
+name = "smartbee-business-connector"
 main = "src/index.ts"
 compatibility_date = "2024-09-23"
 
-# All settings live in the Cloudflare dashboard (Worker → Settings → Variables and Secrets),
+# All settings live in the Cloudflare dashboard (Worker -> Settings -> Variables and Secrets),
 # entered by the business owner. Updates from Git never overwrite them.
 keep_vars = true
 
 [observability]
 enabled = true
-
-# The Worker's memory: which receipt belongs to which order. Created automatically on the first deploy.
-[[d1_databases]]
-binding = "DB"
-database_name = "smartbee-memory"
