@@ -387,7 +387,11 @@ async function confirmFlow(env: McpEnv, tool: string, args: Record<string, unkno
     doc.isDraft = true;
     doc.creationMetadata = { ...(doc.creationMetadata ?? {}), sendOriginalToCustomer: false };
   }
-  const outcome = await createSmartBeeDocument(env, doc);
+  const outcome: any = await createSmartBeeDocument(env, doc);
+  if (outcome?.status === "error" && /roles/i.test(String(outcome.validationErrors?.NotAuthorized ?? ""))) {
+    outcome.hint =
+      "SmartBee refused because the SmartBee USER behind PROVIDERUSERTOKEN has no API role. This is not a connector setting: tell the owner to ask SmartBee (Eddy) to activate the API role on this user, then try again.";
+  }
   return withWhatsApp(outcome, input);
 }
 

@@ -14,14 +14,6 @@ describe("checkSmartBee", () => {
     expect(r.message + r.message_he).not.toContain("pw");
   });
 
-  it("login fine but no API role says so and names the server", async () => {
-    let n = 0;
-    vi.stubGlobal("fetch", vi.fn(async () => (n++ === 0 ? login() : new Response(JSON.stringify({ resultCodeId: 94, result: null, validationErrors: { NotAuthorized: "User missing roles: API" } }), { status: 200 }))));
-    const r = await checkSmartBee(env);
-    expect(r).toMatchObject({ ok: false, problem: "api_role_missing", server: "smartbee.co.il" });
-    expect(r.message).toContain("API role");
-  });
-
   it("network failure is reported as unreachable", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("offline"); }));
     expect(await checkSmartBee(env)).toMatchObject({ ok: false, problem: "unreachable" });

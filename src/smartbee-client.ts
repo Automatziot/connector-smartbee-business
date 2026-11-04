@@ -398,34 +398,10 @@ export async function checkSmartBee(env: SmartBeeEnv): Promise<SmartBeeCheck> {
       message_he: "לא הצלחנו להגיע ל-SmartBee. מנסים שוב בעוד דקה.",
     };
   }
-  // Role probe: look up a document id that cannot exist. "Not found" means the API role is active;
-  // "User missing roles: API" means SmartBee has not activated it for this user (as on production, 2026-10-22).
-  try {
-    const res = await sbFetch(env, "/documents/000000000000000000000000");
-    const body = (await res.json().catch(() => null)) as { resultCodeId?: number; validationErrors?: Record<string, string> | null } | null;
-    const denied = body?.validationErrors?.NotAuthorized;
-    if (denied) {
-      return {
-        ok: false,
-        problem: "api_role_missing",
-        server,
-        message: `Login accepted on ${server}, but SmartBee says this user has no API role (${denied}). Ask SmartBee to activate the API role for the user; nothing in the settings can fix it.`,
-        message_he: `ההתחברות הצליחה ב-${server}, אבל SmartBee מדווחת שלמשתמש אין הרשאת API (${denied}). מבקשים מ-SmartBee להפעיל את הרשאת ה-API למשתמש; אין הגדרה שתתקן את זה.`,
-      };
-    }
-  } catch {
-    return {
-      ok: false,
-      problem: "unreachable",
-      server,
-      message: "Could not reach SmartBee. Try again in a minute.",
-      message_he: "לא הצלחנו להגיע ל-SmartBee. מנסים שוב בעוד דקה.",
-    };
-  }
   return {
     ok: true,
     server,
-    message: `SmartBee accepted the login and the API role on ${server}. PROVIDERUSERTOKEN is checked by the first draft document.`,
-    message_he: `SmartBee קיבלה את ההתחברות ואת הרשאת ה-API ב-${server}. את PROVIDERUSERTOKEN בודקת הטיוטה הראשונה.`,
+    message: `SmartBee accepted the login on ${server}. The API role and PROVIDERUSERTOKEN are only checked when a document is created: make a test draft quote from Claude (draft mode on) to prove them.`,
+    message_he: `SmartBee קיבלה את ההתחברות ב-${server}. הרשאת ה-API ו-PROVIDERUSERTOKEN נבדקות רק בזמן יצירת מסמך: מבקשים מ-Claude הצעת מחיר לבדיקה (מצב טיוטה) כדי להוכיח אותן.`,
   };
 }
