@@ -1,5 +1,5 @@
 import { handleMcp } from "./mcp";
-import type { SmartBeeEnv } from "./smartbee-client";
+import { checkSmartBee, type SmartBeeEnv } from "./smartbee-client";
 
 export interface Env extends SmartBeeEnv {
   MCP_TOKEN?: string;
@@ -12,8 +12,12 @@ export default {
 
     // Install check: what is switched on. Never shows a secret.
     if (url.pathname === "/health") {
+      // /health?check=1 also makes one read-only call to SmartBee and says which setting is wrong.
+      const test = url.searchParams.get("check") === "1" ? await checkSmartBee(env) : undefined;
       return Response.json({
-        ok: Boolean(env.SMARTBEE_CLIENT_ID && env.SMARTBEE_PASSWORD && env.PROVIDERUSERTOKEN && env.MCP_TOKEN),
+        ...(test ? { smartbee_test: test } : {}),
+        mcp_token_length: env.MCP_TOKEN ? env.MCP_TOKEN.length : 0,
+        ok: Boolean(env.SMARTBEE_CLIENT_ID && env.SMARTBEE_PASSWORD && env.PROVIDERUSERTOKEN && env.MCP_TOKEN) && (test ? test.ok : true),
         smartbee: Boolean(env.SMARTBEE_CLIENT_ID && env.SMARTBEE_PASSWORD && env.PROVIDERUSERTOKEN),
         mcp: Boolean(env.MCP_TOKEN),
         smartbee_env: env.SMARTBEE_ENV === "prod" ? "prod" : "test",

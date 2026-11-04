@@ -37,11 +37,12 @@
 1. נכנסים לחשבון ה-Cloudflare שלכם ומחברים את GitHub. Cloudflare יוצרת עותק של הקוד בחשבון ה-GitHub שלכם.
 2. מופיע מסך עם 6 שדות והסבר ליד כל אחד. ממלאים:
    - שלושת פרטי SmartBee שקיבלתם במייל.
-   - `MCP_TOKEN`: סיסמה ארוכה שאתם ממציאים (32 תווים ומעלה, ממחולל הסיסמאות של הדפדפן). שומרים אותה במנהל סיסמאות.
+   - `MCP_TOKEN`: סיסמה ארוכה שאתם ממציאים (32 תווים ומעלה, ממחולל הסיסמאות של הדפדפן, בלי `/ ? # %` ובלי רווחים). **שומרים אותה במנהל סיסמאות לפני שלוחצים Deploy.** אחרי הפריסה אי אפשר לראות אותה שוב.
+   - את שלושת פרטי SmartBee מעתיקים מהמייל ומדביקים (copy-paste), לא מקלידים.
    - `SMARTBEE_ENV`: להשאיר `prod`.
    - `SMARTBEE_FORCE_DRAFT`: להשאיר `1` בבדיקה הראשונה.
 3. לוחצים **Deploy**. בסוף מתקבלת כתובת בסגנון `https://smartbee-business-connector.<שם>.workers.dev`.
-4. בודקים: `<הכתובת>/health` צריך להראות `"ok": true`. הכתובת מראה רק "תקין / לא תקין" ולא את הערכים.
+4. **בדיקה עצמית:** פותחים בדפדפן `<הכתובת>/health?check=1`. ה-Worker פונה ל-SmartBee בבקשת קריאה אחת ומודיע מה לא תקין, בעברית ובאנגלית. `"ok": true` ו-`smartbee_test.ok: true` אומרים ש-SmartBee קיבלה את שלושת הפרטים. הכתובת לא מציגה אף ערך. `mcp_token_length` הוא אורך ה-MCP_TOKEN שנשמר (לא הסיסמה עצמה): אם הוא שונה מאורך הסיסמה ששמרתם, יש טעות בהעתקה.
 
 ## חיבור ל-Claude
 
@@ -64,6 +65,19 @@ https://smartbee-business-connector.<שם>.workers.dev/mcp/<MCP_TOKEN>
 
 קובץ ה-zip `client-smartbee-business` (נמסר יחד עם ההתקנה) מלמד את Claude מתי להכין טיוטה, מתי לבקש אישור ואיך לדווח. מעלים ב-claude.ai: Customize ← Skills ← Add ← Upload a skill.
 
+## משהו לא עובד?
+
+| מה רואים | מה זה אומר | מה עושים |
+|---|---|---|
+| `smartbee_test` עם `login_refused` | SmartBee לא קיבלה את ה-client id או הסיסמה, או ש-`SMARTBEE_ENV` לא מתאים לחשבון | מתקנים את ההגדרה הרלוונטית (למטה) ופותחים שוב את `/health?check=1` |
+| `smartbee_test` עם `provider_token` | ההתחברות עברה אבל ה-provider user token שגוי | מתקנים את `PROVIDERUSERTOKEN` |
+| ב-Claude: "Not found" | הסיסמה בכתובת החיבור שונה מ-`MCP_TOKEN` שב-Cloudflare | פותחים את `<הכתובת>/mcp/<הסיסמה>` בדפדפן. אם מופיע "Token accepted" הסיסמה נכונה. אם "Not found": מחליפים (למטה) ומעדכנים את הכתובת ב-Claude |
+| שכחתם את `MCP_TOKEN` | Cloudflare לא מציגה סיסמה שנשמרה | מחליפים אותה (למטה) |
+
+**איך מתקנים הגדרה אחת, בלי להתקין מחדש:** Cloudflare ← Workers & Pages ← ה-Worker ← Settings ← Variables and Secrets ← עיפרון ליד ההגדרה ← Rotate ← מדביקים ערך חדש ← **Deploy**. ההגדרה נכנסת לתוקף מיד. את `MCP_TOKEN` החדש שומרים קודם במנהל סיסמאות, ואז מעדכנים את הכתובת ב-Claude.
+
+**התחלה מאפס (אם הכול התבלגן):** מוחקים את ה-Worker (Settings ← Danger zone) ואת העותק ב-GitHub, ולוחצים שוב על הכפתור. לא לוחצים שוב בלי למחוק: זה יוצר עותק נוסף ולא דורס.
+
 ## עדכונים והגנות
 
 - ההגדרות שלכם נשמרות ב-Cloudflare ועדכוני קוד לא דורסים אותן (`keep_vars`).
@@ -79,9 +93,10 @@ You are guiding a business owner through installing the **SmartBee business conn
 
 1. **Prerequisites:** GitHub account, Cloudflare account (free), SmartBee API credentials (client id, API password, provider user token, requested from SmartBee for the production account), and a paid Claude plan that supports custom connectors.
 2. **Deploy:** open the "Deploy to Cloudflare" button above while signed in to Cloudflare. Connect GitHub when asked. Cloudflare copies the code into the owner's GitHub and deploys it.
-3. **Settings form (6 fields):** `SMARTBEE_CLIENT_ID`, `SMARTBEE_PASSWORD`, `PROVIDERUSERTOKEN` from SmartBee; `MCP_TOKEN` a new random password of 32+ characters made up by the owner (use the browser's password generator, save it in a password manager); `SMARTBEE_ENV` = `prod`; `SMARTBEE_FORCE_DRAFT` = `1` for the first test. The owner types the secrets; do not look at them.
-4. **Check:** open `https://smartbee-business-connector.<account>.workers.dev/health`. Expect `"ok": true`. It never shows values.
+3. **Settings form (6 fields):** `SMARTBEE_CLIENT_ID`, `SMARTBEE_PASSWORD`, `PROVIDERUSERTOKEN` from SmartBee; `MCP_TOKEN` a new random password of 32+ characters made up by the owner (use the browser's password generator, save it in a password manager BEFORE clicking Deploy, it cannot be shown again; avoid `/ ? # %` and spaces); `SMARTBEE_ENV` = `prod`; `SMARTBEE_FORCE_DRAFT` = `1` for the first test. The owner pastes (not retypes) the SmartBee values from SmartBee's email; do not look at them.
+4. **Self-test:** open `https://smartbee-business-connector.<account>.workers.dev/health?check=1`. The Worker makes one read-only call to SmartBee and reports which setting is wrong (`login_refused` = client id, password or SMARTBEE_ENV; `provider_token` = PROVIDERUSERTOKEN). Expect `"ok": true` and `smartbee_test.ok: true`. It never shows values; `mcp_token_length` is only the length of the saved MCP_TOKEN, to compare with the length of the one in the password manager.
 5. **Connect Claude:** claude.ai → Settings → Connectors → Add custom connector → `https://smartbee-business-connector.<account>.workers.dev/mcp/<MCP_TOKEN>`. The URL contains the secret: do not share it. To rotate, change `MCP_TOKEN` in Cloudflare (Worker → Settings → Variables and Secrets) and reconnect.
 6. **Dry run:** with `SMARTBEE_FORCE_DRAFT=1` everything is saved as a SmartBee draft: nothing is emailed to the customer. Ask Claude to prepare a test quote, approve the preview, and confirm in SmartBee that a draft appeared.
 7. **Go live:** set `SMARTBEE_FORCE_DRAFT` to `0` in Cloudflare. Documents are then issued for real, after the owner approves each preview. Receipts are official and cannot be deleted.
 8. **Skill:** upload `client-smartbee-business.zip` in claude.ai (Customize → Skills → Add → Upload a skill).
+9. **If something fails:** open `<address>/mcp/<MCP_TOKEN>` in the browser: "Token accepted" = token is right; "Not found" = the token in the address differs from `MCP_TOKEN` in Cloudflare. Fix one setting without redeploying: Worker → Settings → Variables and Secrets → pencil → Rotate → paste → Deploy. A lost `MCP_TOKEN` is replaced the same way (then update the address in Claude). To start over: delete the Worker (Settings → Danger zone) and the copied GitHub repo, then use the button again; pressing it again without deleting creates a second copy, it does not overwrite.

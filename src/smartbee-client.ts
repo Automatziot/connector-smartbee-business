@@ -362,3 +362,46 @@ export async function searchExpenses(env: SmartBeeEnv, input: { fromDate?: strin
   }
   return { fromDate: input.fromDate ?? "(all)", toDate: input.toDate ?? "now", count, total: Math.round(total * 100) / 100, byType, recent };
 }
+
+export interface SmartBeeCheck {
+  ok: boolean;
+  /** Which setting to look at. Never contains a value. */
+  problem?: "login_refused" | "provider_token" | "unreachable";
+  message: string;
+  message_he: string;
+}
+
+/** Self-test: one real, read-only round trip to SmartBee with the saved settings. Never returns a value. */
+export async function checkSmartBee(env: SmartBeeEnv): Promise<SmartBeeCheck> {
+  cached = null; // always a fresh login, never a cached one from before a fix
+  try {
+    await authenticate(env);
+  } catch (err) {
+    const m = /SmartBee auth failed: (\d+)/.exec((err as Error).message);
+    if (m) {
+      return {
+        ok: false,
+        problem: "login_refused",
+        message: `SmartBee refused the login (HTTP ${m[1]}). Check SMARTBEE_CLIENT_ID and SMARTBEE_PASSWORD, and that SMARTBEE_ENV matches the account (prod or test).`,
+        message_he: `SmartBee סירבה להתחברות (קוד ${m[1]}). בודקים את SMARTBEE_CLIENT_ID ואת SMARTBEE_PASSWORD, ושההגדרה SMARTBEE_ENV מתאימה לחשבון (prod או test).`,
+      };
+    }
+    return {
+      ok: false,
+      problem: "unreachable",
+      message: "Could not reach SmartBee. Try again in a minute.",
+      message_he: "לא הצלחנו להגיע ל-SmartBee. מנסים שוב בעוד דקה.",
+    };
+  }
+  try {
+    await searchDocuments(env, { limit: 1 });
+  } catch {
+    return {
+      ok: false,
+      problem: "provider_token",
+      message: "SmartBee accepted the login but refused the search. Check PROVIDERUSERTOKEN.",
+      message_he: "SmartBee קיבלה את ההתחברות אבל סירבה לחיפוש. בודקים את PROVIDERUSERTOKEN.",
+    };
+  }
+  return { ok: true, message: "SmartBee accepted all three settings.", message_he: "SmartBee קיבלה את שלושת הפרטים." };
+}

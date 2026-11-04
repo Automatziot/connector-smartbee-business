@@ -527,7 +527,7 @@ async function handleRpc(env: McpEnv, msg: RpcMsg): Promise<object | null> {
 
 export async function handleMcp(request: Request, env: SmartBeeEnv & { MCP_TOKEN?: string }, token: string): Promise<Response> {
   if (!env.MCP_TOKEN || token !== env.MCP_TOKEN) return new Response("Not found", { status: 404 });
-  if (request.method !== "POST") return new Response("Method not allowed", { status: 405, headers: { allow: "POST" } });
+  if (request.method !== "POST") return new Response("Token accepted. This address only works from Claude (custom connector). Nothing more to do here.", { status: 405, headers: { allow: "POST" } });
 
   let body: RpcMsg | RpcMsg[];
   try {
